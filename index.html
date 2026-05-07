@@ -221,7 +221,6 @@
   .copy-hint { font-size:0.78rem; color:var(--text3); text-align:center; margin-top:.5rem; }
   .modal-divider { height:1px; background:var(--border); margin:1.25rem 0; }
 
-  /* Confirm modal */
   .confirm-modal { text-align:center; }
   .confirm-icon { font-size:3rem; margin-bottom:1rem; }
   .confirm-text { color:var(--text2); font-size:0.95rem; line-height:1.6; margin-bottom:0.5rem; }
@@ -315,29 +314,19 @@
       <button class="auth-tab" id="tabRegister" onclick="switchTab('register')" data-i18n="register">Registrarse</button>
     </div>
     <div id="loginForm">
-      <div class="form-group">
-        <label data-i18n="username">Usuario</label>
-        <input type="text" id="loginUser" placeholder="tu_usuario" autocomplete="username">
-      </div>
-      <div class="form-group">
-        <label data-i18n="password">Contraseña</label>
-        <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
-      </div>
+      <div class="form-group"><label data-i18n="username">Usuario</label>
+        <input type="text" id="loginUser" placeholder="tu_usuario" autocomplete="username"></div>
+      <div class="form-group"><label data-i18n="password">Contraseña</label>
+        <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password"></div>
       <button class="auth-btn" id="loginBtn" onclick="doLogin()" data-i18n="loginBtn">Entrar →</button>
     </div>
     <div id="registerForm" style="display:none">
-      <div class="form-group">
-        <label data-i18n="chooseUsername">Elige tu usuario</label>
-        <input type="text" id="regUser" placeholder="tu_nombre_aqui" autocomplete="username">
-      </div>
-      <div class="form-group">
-        <label data-i18n="choosePassword">Contraseña</label>
-        <input type="password" id="regPass" placeholder="min. 6 caracteres" autocomplete="new-password">
-      </div>
-      <div class="form-group">
-        <label data-i18n="chooseAvatar">Elige tu avatar</label>
-        <div class="avatar-picker" id="avatarPicker"></div>
-      </div>
+      <div class="form-group"><label data-i18n="chooseUsername">Elige tu usuario</label>
+        <input type="text" id="regUser" placeholder="tu_nombre_aqui" autocomplete="username"></div>
+      <div class="form-group"><label data-i18n="choosePassword">Contraseña</label>
+        <input type="password" id="regPass" placeholder="min. 6 caracteres" autocomplete="new-password"></div>
+      <div class="form-group"><label data-i18n="chooseAvatar">Elige tu avatar</label>
+        <div class="avatar-picker" id="avatarPicker"></div></div>
       <button class="auth-btn" id="regBtn" onclick="doRegister()" data-i18n="registerBtn">Crear cuenta →</button>
     </div>
     <p class="auth-error" id="authError"></p>
@@ -407,11 +396,9 @@
             <button class="icon-btn info-btn" onclick="openModal('roomInfo')" title="Información de la sala">ℹ️</button>
           </div>
         </div>
-
         <div class="messages" id="messages">
           <div id="newMsgBtn" onclick="scrollToBottom()">↓ <span data-i18n="newMsgs">Nuevos mensajes</span></div>
         </div>
-
         <div class="input-area" id="inputArea">
           <div class="input-toolbar" id="inputToolbar">
             <button class="toolbar-btn" onclick="toggleEmoji()">😀</button>
@@ -450,7 +437,7 @@
   </div>
 </div>
 
-<!-- MODAL: Unirse a sala -->
+<!-- MODAL: Unirse -->
 <div class="modal-overlay" id="joinRoomModal">
   <div class="modal">
     <div class="modal-title"><span class="title-icon">🔑</span><span data-i18n="joinRoomTitle">Unirse a sala</span>
@@ -483,13 +470,10 @@
     </div>
     <p class="copy-hint" data-i18n="shareHint">Comparte este código y PIN con tus amigos para invitarlos</p>
     <button class="modal-btn primary" onclick="copyRoomInfo()" data-i18n="copyInfo">📋 Copiar invitación</button>
-
-    <!-- Solo visible si SOS el dueño -->
     <div id="ownerActions" style="display:none">
       <div class="modal-divider"></div>
       <button class="modal-btn danger" onclick="confirmDeleteRoom()" data-i18n="deleteRoom">🗑️ Eliminar sala</button>
     </div>
-
     <button class="modal-btn secondary" onclick="leaveRoom()" style="background:rgba(239,68,68,0.08);color:var(--text2);border-color:var(--border)" data-i18n="leaveRoom">🚪 Salir de la sala</button>
     <button class="modal-btn secondary" onclick="closeModal('roomInfo')" data-i18n="close">Cerrar</button>
   </div>
@@ -500,8 +484,8 @@
   <div class="modal confirm-modal">
     <div class="confirm-icon">🗑️</div>
     <div class="modal-title" style="justify-content:center"><span data-i18n="deleteTitle">Eliminar sala</span></div>
-    <p class="confirm-text" id="confirmDeleteText">¿Estás seguro de que querés eliminar esta sala?</p>
-    <p class="confirm-warning" data-i18n="deleteWarning">Esta acción no se puede deshacer. Se borrarán todos los mensajes y se sacará a todos los miembros.</p>
+    <p class="confirm-text" id="confirmDeleteText"></p>
+    <p class="confirm-warning" data-i18n="deleteWarning">Esta acción no se puede deshacer. Se borrarán todos los mensajes.</p>
     <button class="modal-btn danger" onclick="deleteRoom()" data-i18n="deleteConfirm">Sí, eliminar definitivamente</button>
     <button class="modal-btn secondary" onclick="closeModal('confirmDelete')" data-i18n="cancel">Cancelar</button>
   </div>
@@ -511,7 +495,7 @@
   <img id="viewerImg" src="">
 </div>
 
-<div id="toast">✓ Copiado al portapapeles</div>
+<div id="toast">✓</div>
 
 <script>
 const firebaseConfig = {
@@ -554,11 +538,11 @@ const i18n = {
     copiedInvite:'¡Invitación copiada!', connOnline:'En línea', connOffline:'Desconectado',
     errorFirebase:'Error de conexión. Intenta de nuevo.', errorFileBig:'Archivo muy grande (máx. 2 MB)',
     ownerTag:'creador',
-    deleteRoom:'🗑️ Eliminar sala',
-    deleteTitle:'Eliminar sala',
-    deleteWarning:'Esta acción no se puede deshacer. Se borrarán todos los mensajes y se sacará a todos los miembros.',
-    deleteConfirm:'Sí, eliminar definitivamente',
-    roomDeleted:'Sala eliminada correctamente'
+    deleteRoom:'🗑️ Eliminar sala', deleteTitle:'Eliminar sala',
+    deleteWarning:'Esta acción no se puede deshacer. Se borrarán todos los mensajes.',
+    deleteConfirm:'Sí, eliminar definitivamente', roomDeleted:'Sala eliminada',
+    roomDeletedByOwner:'La sala fue eliminada por el creador',
+    removedFromRoom:'Has sido removido de la sala'
   },
   en: {
     login:'Sign in', register:'Sign up', username:'Username', password:'Password',
@@ -584,11 +568,11 @@ const i18n = {
     copiedInvite:'Invite copied!', connOnline:'Online', connOffline:'Offline',
     errorFirebase:'Connection error. Try again.', errorFileBig:'File too large (max 2 MB)',
     ownerTag:'owner',
-    deleteRoom:'🗑️ Delete room',
-    deleteTitle:'Delete room',
-    deleteWarning:'This action cannot be undone. All messages will be deleted and all members will be removed.',
-    deleteConfirm:'Yes, delete permanently',
-    roomDeleted:'Room deleted successfully'
+    deleteRoom:'🗑️ Delete room', deleteTitle:'Delete room',
+    deleteWarning:'This action cannot be undone. All messages will be deleted.',
+    deleteConfirm:'Yes, delete permanently', roomDeleted:'Room deleted',
+    roomDeletedByOwner:'This room was deleted by the owner',
+    removedFromRoom:'You have been removed from the room'
   }
 };
 let lang = 'es';
@@ -701,8 +685,8 @@ function autoResize(el) {
 function showError(msg) { const e=document.getElementById('authError'); e.textContent=msg; e.style.display='block'; }
 function hideError() { document.getElementById('authError').style.display='none'; }
 function showToast(msg) {
-  const t=document.getElementById('toast'); t.innerHTML='✓ '+msg; t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),2500);
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3000);
 }
 function setLoading(btnId, loading) {
   const btn=document.getElementById(btnId); if(!btn) return;
@@ -819,18 +803,53 @@ function listenConnection() {
 }
 
 // ═══════════════════════════════════════════════════
-// SALAS
+// SALAS — LISTENER CON DETECCIÓN DE ELIMINACIÓN
 // ═══════════════════════════════════════════════════
 function listenRooms() {
-  roomsListenerCb=snap=>{ cachedRooms=snap.val()||{}; renderRooms(); };
-  db.ref('rooms').on('value',roomsListenerCb);
-  onlineListenerCb=snap=>{
-    onlineUsers=new Set(Object.keys(snap.val()||{}));
+  roomsListenerCb = snap => {
+    const prevRooms = cachedRooms;          // Guardar estado anterior
+    cachedRooms = snap.val() || {};          // Actualizar cache
+
+    // ── DETECCIÓN: la sala actual fue eliminada ──
+    if (currentRoom && !cachedRooms[currentRoom]) {
+      const roomName = prevRooms[currentRoom] ? prevRooms[currentRoom].name : '';
+      currentRoom = null;
+      detachMessagesListener();
+      // Cerrar modales que puedan estar abiertos
+      document.getElementById('roomInfoModal').classList.remove('open');
+      document.getElementById('confirmDeleteModal').classList.remove('open');
+      showWelcome();
+      showToast(i18n[lang].roomDeletedByOwner);
+      return;
+    }
+
+    // ── DETECCIÓN: me sacaron de la sala ──
+    if (currentRoom && cachedRooms[currentRoom]) {
+      const room = cachedRooms[currentRoom];
+      if (!room.members || !room.members[currentUser]) {
+        currentRoom = null;
+        detachMessagesListener();
+        document.getElementById('roomInfoModal').classList.remove('open');
+        showWelcome();
+        showToast(i18n[lang].removedFromRoom);
+        return;
+      }
+      // Actualizar header si cambió la cantidad de miembros
+      updateChatHeader();
+    }
+
+    renderRooms();
+  };
+  db.ref('rooms').on('value', roomsListenerCb);
+
+  onlineListenerCb = snap => {
+    onlineUsers = new Set(Object.keys(snap.val()||{}));
     renderRooms();
     if(currentRoom) updateChatHeader();
   };
-  db.ref('users').orderByChild('online').equalTo(true).on('value',onlineListenerCb);
+  db.ref('users').orderByChild('online').equalTo(true).on('value', onlineListenerCb);
 }
+
 function detachAllListeners() {
   if(roomsListenerCb){ db.ref('rooms').off('value',roomsListenerCb); roomsListenerCb=null; }
   if(onlineListenerCb){ db.ref('users').off('value',onlineListenerCb); onlineListenerCb=null; }
@@ -939,35 +958,28 @@ async function leaveRoom() {
   currentRoom=null; detachMessagesListener(); closeModal('roomInfo'); showWelcome();
 }
 
-// ── ELIMINAR SALA (solo owner) ──
 function confirmDeleteRoom() {
   const room = cachedRooms[currentRoom];
   if (!room || room.owner !== currentUser) return;
-  const roomName = room.name;
   document.getElementById('confirmDeleteText').textContent =
-    (lang==='es' ? '¿Estás seguro de que querés eliminar "' : 'Are you sure you want to delete "') +
-    roomName + (lang==='es' ? '"?' : '"?');
+    (lang==='es'?'¿Estás seguro de que querés eliminar "':'Are you sure you want to delete "') +
+    room.name + (lang==='es'?'"?':'"?');
   closeModal('roomInfo');
   openModal('confirmDelete');
 }
-
 async function deleteRoom() {
   const code = currentRoom;
   if (!code) return;
   const room = cachedRooms[code];
   if (!room || room.owner !== currentUser) return;
-
   closeModal('confirmDelete');
   currentRoom = null;
   detachMessagesListener();
-
   try {
     await db.ref('rooms/' + code).remove();
     delete roomLastMessages[code];
     showToast(i18n[lang].roomDeleted);
-  } catch(e) {
-    showToast(i18n[lang].errorFirebase);
-  }
+  } catch(e) { showToast(i18n[lang].errorFirebase); }
   showWelcome();
 }
 
@@ -1129,9 +1141,6 @@ async function toggleReaction(msgId,emoji) {
   } catch(e){}
 }
 
-// ═══════════════════════════════════════════════════
-// IMAGE VIEWER
-// ═══════════════════════════════════════════════════
 function viewImage(src) {
   document.getElementById('viewerImg').src=src;
   document.getElementById('imageViewer').classList.add('open');
@@ -1147,11 +1156,16 @@ async function openModal(name) {
     document.getElementById('roomInfoTitle').textContent=room.name;
     document.getElementById('roomInfoCode').textContent=room.code;
     document.getElementById('roomInfoPin').textContent=room.pin;
-    // Mostrar/ocultar botón de eliminar según si es owner
-    document.getElementById('ownerActions').style.display = room.owner===currentUser ? '' : 'none';
-    // Lista de miembros
+    document.getElementById('ownerActions').style.display=room.owner===currentUser?'':'none';
     const members=room.members?Object.keys(room.members):[];
     if(members.length){
+      // Precargar avatares
+      for(const m of members){
+        if(!userAvatarCache[m]){
+          const snap=await db.ref('users/'+m+'/avatar').once('value');
+          if(snap.val()) userAvatarCache[m]=snap.val();
+        }
+      }
       let html='<div style="display:flex;flex-direction:column;gap:6px;margin-top:6px">';
       for(const m of members){
         const av=userAvatarCache[m]||'😊';
@@ -1165,26 +1179,6 @@ async function openModal(name) {
       }
       html+='</div>';
       document.getElementById('roomMembersList').innerHTML=html;
-      for(const m of members){
-        if(!userAvatarCache[m]){
-          const snap=await db.ref('users/'+m+'/avatar').once('value');
-          if(snap.val()) userAvatarCache[m]=snap.val();
-        }
-      }
-      // Re-renderizar con avatares cargados
-      let html2='<div style="display:flex;flex-direction:column;gap:6px;margin-top:6px">';
-      for(const m of members){
-        const av=userAvatarCache[m]||'😊';
-        const isOwner=m===room.owner;
-        const isOn=onlineUsers.has(m);
-        html2+=`<div style="display:flex;align-items:center;gap:8px;padding:4px 0">
-          <span style="font-size:1.2rem">${av}</span>
-          <span style="flex:1;font-size:.9rem">${escapeHtml(m)}${isOwner?' <span style="font-size:.7rem;color:var(--accent2);background:rgba(108,99,255,0.15);padding:1px 6px;border-radius:8px">'+i18n[lang].ownerTag+'</span>':''}</span>
-          <span style="width:7px;height:7px;border-radius:50%;background:${isOn?'var(--green)':'var(--text3)'}"></span>
-        </div>`;
-      }
-      html2+='</div>';
-      document.getElementById('roomMembersList').innerHTML=html2;
     } else {
       document.getElementById('roomMembersList').textContent='—';
     }
@@ -1202,7 +1196,7 @@ function copyRoomInfo() {
 document.querySelectorAll('.modal-overlay').forEach(el=>{
   el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open');});
 });
-document.getElementById('messages').addEventListener('click', ()=>{
+document.getElementById('messages').addEventListener('click',()=>{
   document.getElementById('emojiBar').classList.remove('open');
 });
 
