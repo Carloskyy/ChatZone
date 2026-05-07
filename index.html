@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ChatZone</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<!-- Firebase SDK (versión compat para HTML sin bundler) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <style>
   :root {
     --bg: #0d0d12;
@@ -70,6 +73,7 @@
     color:#fff; border-radius:var(--radius-sm); font-size:1rem; font-weight:600;
     font-family:'Syne',sans-serif; letter-spacing:.04em; transition:all .2s; margin-top:.5rem; }
   .auth-btn:hover { opacity:.9; transform:translateY(-1px); box-shadow:0 6px 20px rgba(108,99,255,0.4); }
+  .auth-btn:disabled { opacity:.5; cursor:not-allowed; transform:none; }
   .auth-error { color:var(--red); font-size:0.85rem; text-align:center; margin-top:.5rem; display:none; }
   .lang-toggle { position:absolute; top:20px; right:20px; display:flex; gap:6px; }
   .lang-btn { padding:6px 14px; border-radius:20px; background:var(--bg3); border:1px solid var(--border);
@@ -92,8 +96,13 @@
     border:2px solid var(--accent); position:relative; }
   .online-dot { position:absolute; bottom:1px; right:1px; width:10px; height:10px;
     background:var(--green); border-radius:50%; border:2px solid var(--bg2); }
+  .online-dot.offline { background:var(--red); }
   .user-name-main { font-weight:600; font-size:0.95rem; font-family:'Syne',sans-serif; }
-  .user-status { font-size:0.78rem; color:var(--text3); }
+  .user-status { font-size:0.78rem; color:var(--text3); display:flex; align-items:center; gap:5px; }
+  .conn-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+  .conn-dot.on { background:var(--green); }
+  .conn-dot.off { background:var(--red); animation:blink 1.5s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
   .sidebar-actions { display:flex; gap:6px; margin-left:auto; }
   .icon-btn { width:34px; height:34px; border-radius:8px; background:transparent;
     color:var(--text2); font-size:1.1rem; display:flex; align-items:center; justify-content:center;
@@ -112,12 +121,9 @@
   .room-item.active { background:rgba(108,99,255,0.15); border:1px solid var(--border); }
   .room-icon { width:40px; height:40px; border-radius:12px; display:flex;
     align-items:center; justify-content:center; font-size:1.2rem; flex-shrink:0; }
-  .room-icon.dm { border-radius:50%; }
   .room-info { flex:1; min-width:0; }
   .room-name { font-weight:500; font-size:0.9rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .room-last { font-size:0.78rem; color:var(--text3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px; }
-  .room-badge { background:var(--accent); color:#fff; font-size:0.7rem; font-weight:700;
-    border-radius:10px; padding:2px 7px; min-width:18px; text-align:center; }
   .sidebar-bottom { padding:1rem; border-top:1px solid var(--border); display:flex; gap:6px; }
   .sidebar-btn { flex:1; padding:9px; background:var(--bg3); border:1px solid var(--border);
     border-radius:var(--radius-sm); color:var(--text2); font-size:0.82rem; display:flex;
@@ -140,12 +146,11 @@
   .call-btn.screen:hover { background:rgba(56,189,248,0.25); }
 
   /* ── MESSAGES ── */
-  .messages { flex:1; overflow-y:auto; padding:1.5rem; display:flex; flex-direction:column; gap:4px; }
+  .messages { flex:1; overflow-y:auto; padding:1.5rem; display:flex; flex-direction:column; gap:4px; position:relative; }
   .messages::-webkit-scrollbar { width:4px; }
   .messages::-webkit-scrollbar-track { background:transparent; }
   .messages::-webkit-scrollbar-thumb { background:var(--bg4); border-radius:2px; }
-  .msg-group { display:flex; flex-direction:column; margin:4px 0; }
-  .msg-row { display:flex; align-items:flex-end; gap:8px; }
+  .msg-row { display:flex; align-items:flex-end; gap:8px; margin:2px 0; }
   .msg-row.mine { flex-direction:row-reverse; }
   .msg-avatar { width:30px; height:30px; border-radius:50%; font-size:0.9rem;
     display:flex; align-items:center; justify-content:center; flex-shrink:0;
@@ -163,17 +168,20 @@
   .msg-video { max-width:280px; border-radius:12px; }
   .msg-file { display:flex; align-items:center; gap:10px; padding:10px 14px;
     background:var(--msg-other); border:1px solid var(--border); border-radius:12px; }
-  .date-divider { text-align:center; margin:1rem 0; }
-  .date-divider span { background:var(--bg3); color:var(--text3); font-size:0.75rem;
-    padding:4px 14px; border-radius:20px; border:1px solid var(--border); }
   .system-msg { text-align:center; color:var(--text3); font-size:0.8rem; margin:6px 0; font-style:italic; }
+
+  /* ── NEW MESSAGES INDICATOR ── */
+  #newMsgBtn { display:none; position:absolute; bottom:10px; left:50%; transform:translateX(-50%);
+    background:var(--accent); color:#fff; padding:8px 22px; border-radius:20px;
+    font-size:0.85rem; font-weight:600; z-index:10; cursor:pointer;
+    box-shadow:0 4px 16px rgba(108,99,255,0.4); transition:all .2s; }
+  #newMsgBtn:hover { transform:translateX(-50%) translateY(-2px); }
 
   /* ── INPUT ── */
   .input-area { padding:1rem 1.5rem; border-top:1px solid var(--border); background:var(--bg2); }
   .input-toolbar { display:flex; gap:6px; margin-bottom:8px; }
   .toolbar-btn { padding:5px 10px; border-radius:8px; background:var(--bg3); border:1px solid var(--border);
-    color:var(--text2); font-size:0.82rem; display:flex; align-items:center; gap:5px;
-    transition:all .2s; }
+    color:var(--text2); font-size:0.82rem; display:flex; align-items:center; gap:5px; transition:all .2s; }
   .toolbar-btn:hover { background:var(--bg4); color:var(--text); border-color:var(--border2); }
   .input-row { display:flex; align-items:flex-end; gap:10px; }
   .msg-input { flex:1; padding:12px 16px; background:var(--bg3); border:1px solid var(--border);
@@ -185,13 +193,12 @@
     transition:all .2s; flex-shrink:0; }
   .send-btn:hover { transform:scale(1.05); box-shadow:0 4px 16px rgba(108,99,255,0.5); }
   .attach-btn { width:40px; height:40px; border-radius:50%; background:var(--bg3); border:1px solid var(--border);
-    color:var(--text2); font-size:1rem; display:flex; align-items:center; justify-content:center;
-    transition:all .2s; }
+    color:var(--text2); font-size:1rem; display:flex; align-items:center; justify-content:center; transition:all .2s; }
   .attach-btn:hover { background:var(--bg4); color:var(--accent2); border-color:var(--border2); }
 
   /* ── MODALS ── */
-  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.7); display:flex;
-    align-items:center; justify-content:center; z-index:1000; backdrop-filter:blur(4px); display:none; }
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.7); display:none;
+    align-items:center; justify-content:center; z-index:1000; backdrop-filter:blur(4px); }
   .modal-overlay.open { display:flex; }
   .modal { background:var(--bg2); border:1px solid var(--border); border-radius:24px;
     padding:2rem; width:420px; max-width:95vw; box-shadow:var(--shadow); }
@@ -250,13 +257,18 @@
   .welcome-btn:hover { transform:translateY(-2px); }
 
   /* ── EMOJI PICKER ── */
-  .emoji-bar { display:flex; flex-wrap:wrap; gap:4px; padding:.75rem;
-    background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius-sm);
-    margin-bottom:8px; display:none; }
+  .emoji-bar { display:none; flex-wrap:wrap; gap:4px; padding:.75rem;
+    background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius-sm); margin-bottom:8px; }
   .emoji-bar.open { display:flex; }
   .emoji-item { width:32px; height:32px; border-radius:8px; display:flex; align-items:center;
     justify-content:center; font-size:1.1rem; cursor:pointer; transition:all .2s; }
   .emoji-item:hover { background:var(--bg4); transform:scale(1.2); }
+
+  /* ── IMAGE VIEWER ── */
+  #imageViewer { position:fixed; inset:0; background:rgba(0,0,0,0.95); z-index:3000;
+    display:none; align-items:center; justify-content:center; cursor:pointer; }
+  #imageViewer.open { display:flex; }
+  #imageViewer img { max-width:95%; max-height:95vh; border-radius:8px; }
 
   /* ── TOAST ── */
   #toast { position:fixed; bottom:2rem; left:50%; transform:translateX(-50%) translateY(100px);
@@ -275,12 +287,13 @@
     .app-layout { grid-template-columns:1fr; }
     .sidebar { position:fixed; left:-100%; top:0; bottom:0; z-index:100; width:280px; transition:.3s; }
     .sidebar.open { left:0; }
+    .chat-header-actions .call-btn span { display:none; }
   }
 
   /* ── TYPING INDICATOR ── */
-  .typing { display:flex; align-items:center; gap:4px; padding:10px 14px;
+  .typing { display:none; align-items:center; gap:4px; padding:10px 14px;
     background:var(--msg-other); border-radius:18px; border-bottom-left-radius:4px;
-    border:1px solid var(--border); display:none; }
+    border:1px solid var(--border); }
   .typing.show { display:flex; }
   .typing-dot { width:7px; height:7px; border-radius:50%; background:var(--text3);
     animation:typingBounce 1.4s infinite; }
@@ -294,6 +307,11 @@
     padding:2px 8px; font-size:0.8rem; cursor:pointer; transition:all .2s; display:flex; align-items:center; gap:3px; }
   .reaction-pill:hover { background:var(--bg4); border-color:var(--border2); }
   .reaction-pill.mine { background:rgba(108,99,255,0.2); border-color:var(--border2); }
+
+  /* ── LOADING SPINNER ── */
+  .spinner { display:inline-block; width:16px; height:16px; border:2px solid rgba(255,255,255,0.3);
+    border-top-color:#fff; border-radius:50%; animation:spin .6s linear infinite; vertical-align:middle; }
+  @keyframes spin { to { transform:rotate(360deg); } }
 </style>
 </head>
 <body>
@@ -315,7 +333,6 @@
       <button class="auth-tab active" id="tabLogin" onclick="switchTab('login')" data-i18n="login">Iniciar sesión</button>
       <button class="auth-tab" id="tabRegister" onclick="switchTab('register')" data-i18n="register">Registrarse</button>
     </div>
-    <!-- LOGIN -->
     <div id="loginForm">
       <div class="form-group">
         <label data-i18n="username">Usuario</label>
@@ -325,9 +342,8 @@
         <label data-i18n="password">Contraseña</label>
         <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
       </div>
-      <button class="auth-btn" onclick="doLogin()" data-i18n="loginBtn">Entrar →</button>
+      <button class="auth-btn" id="loginBtn" onclick="doLogin()" data-i18n="loginBtn">Entrar →</button>
     </div>
-    <!-- REGISTER -->
     <div id="registerForm" style="display:none">
       <div class="form-group">
         <label data-i18n="chooseUsername">Elige tu usuario</label>
@@ -341,7 +357,7 @@
         <label data-i18n="chooseAvatar">Elige tu avatar</label>
         <div class="avatar-picker" id="avatarPicker"></div>
       </div>
-      <button class="auth-btn" onclick="doRegister()" data-i18n="registerBtn">Crear cuenta →</button>
+      <button class="auth-btn" id="regBtn" onclick="doRegister()" data-i18n="registerBtn">Crear cuenta →</button>
     </div>
     <p class="auth-error" id="authError"></p>
   </div>
@@ -350,17 +366,19 @@
 <!-- MAIN APP -->
 <div id="app">
   <div class="app-layout">
-    <!-- SIDEBAR -->
     <div class="sidebar" id="sidebar">
       <div class="sidebar-header">
         <div class="user-info">
           <div class="user-avatar-main" id="sidebarAvatar">
             <span id="sidebarAvatarEmoji">😊</span>
-            <div class="online-dot"></div>
+            <div class="online-dot" id="onlineDot"></div>
           </div>
           <div>
             <div class="user-name-main" id="sidebarName">Usuario</div>
-            <div class="user-status" id="sidebarStatus">En línea</div>
+            <div class="user-status" id="sidebarStatus">
+              <span class="conn-dot on" id="connDot"></span>
+              <span id="statusText">En línea</span>
+            </div>
           </div>
           <div class="sidebar-actions">
             <button class="icon-btn" onclick="openModal('createRoom')" title="Nueva sala">＋</button>
@@ -383,9 +401,7 @@
       </div>
     </div>
 
-    <!-- CHAT AREA -->
     <div class="chat-area" id="chatArea">
-      <!-- WELCOME -->
       <div class="welcome-state" id="welcomeState">
         <div class="welcome-icon">💬</div>
         <h2 id="welcomeTitle">Bienvenido a ChatZone</h2>
@@ -400,7 +416,6 @@
         </div>
       </div>
 
-      <!-- ACTIVE CHAT -->
       <div id="activeChatView" style="display:none; flex-direction:column; height:100%;">
         <div class="chat-header">
           <div style="font-size:1.6rem" id="chatRoomIcon">💬</div>
@@ -415,13 +430,8 @@
           </div>
         </div>
 
-        <div class="messages" id="messages"></div>
-
-        <div id="typingIndicator" style="padding:0 1.5rem .25rem; display:none;">
-          <div style="display:flex;align-items:center;gap:8px;font-size:.8rem;color:var(--text3)">
-            <div class="typing show"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>
-            <span id="typingText">alguien está escribiendo...</span>
-          </div>
+        <div class="messages" id="messages">
+          <div id="newMsgBtn" onclick="scrollToBottom()">↓ <span data-i18n="newMsgs">Nuevos mensajes</span></div>
         </div>
 
         <div class="input-area">
@@ -432,7 +442,7 @@
           </div>
           <div class="emoji-bar" id="emojiBar"></div>
           <div class="input-row">
-            <textarea class="msg-input" id="msgInput" rows="1" placeholder="Escribe un mensaje..." 
+            <textarea class="msg-input" id="msgInput" rows="1" placeholder="Escribe un mensaje..."
               onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
             <input type="file" id="fileInput" style="display:none" onchange="handleFile(event,'file')">
             <input type="file" id="mediaInput" accept="image/*,video/*" style="display:none" onchange="handleFile(event,'media')">
@@ -445,52 +455,40 @@
 </div>
 
 <!-- MODALS -->
-<!-- Create Room -->
 <div class="modal-overlay" id="createRoomModal">
   <div class="modal">
     <div class="modal-title"><span class="title-icon">✨</span><span data-i18n="createRoomTitle">Crear nueva sala</span>
-      <button class="modal-close" onclick="closeModal('createRoom')">✕</button>
-    </div>
+      <button class="modal-close" onclick="closeModal('createRoom')">✕</button></div>
     <div class="form-group"><label data-i18n="roomName">Nombre de la sala</label>
-      <input type="text" id="newRoomName" placeholder="Ej: Grupo de Amigos">
-    </div>
+      <input type="text" id="newRoomName" placeholder="Ej: Grupo de Amigos"></div>
     <div class="form-group"><label data-i18n="roomCode">Código de sala (para invitar)</label>
-      <input type="text" id="newRoomCode" placeholder="Ej: GrupoA">
-    </div>
+      <input type="text" id="newRoomCode" placeholder="Ej: GrupoA"></div>
     <div class="form-group"><label data-i18n="roomPin">PIN secreto</label>
-      <input type="text" id="newRoomPin" placeholder="Ej: 1234">
-    </div>
+      <input type="text" id="newRoomPin" placeholder="Ej: 1234"></div>
     <div class="form-group"><label data-i18n="roomIcon2">Icono de la sala</label>
-      <div class="avatar-picker" id="roomIconPicker"></div>
-    </div>
-    <button class="modal-btn primary" onclick="createRoom()" data-i18n="createBtn">Crear sala →</button>
+      <div class="avatar-picker" id="roomIconPicker"></div></div>
+    <button class="modal-btn primary" id="createRoomBtn" onclick="createRoom()" data-i18n="createBtn">Crear sala →</button>
     <button class="modal-btn secondary" onclick="closeModal('createRoom')" data-i18n="cancel">Cancelar</button>
   </div>
 </div>
 
-<!-- Join Room -->
 <div class="modal-overlay" id="joinRoomModal">
   <div class="modal">
     <div class="modal-title"><span class="title-icon">🔑</span><span data-i18n="joinRoomTitle">Unirse a sala</span>
-      <button class="modal-close" onclick="closeModal('joinRoom')">✕</button>
-    </div>
+      <button class="modal-close" onclick="closeModal('joinRoom')">✕</button></div>
     <div class="form-group"><label data-i18n="enterCode">Código de sala</label>
-      <input type="text" id="joinCode" placeholder="Ej: GrupoA">
-    </div>
+      <input type="text" id="joinCode" placeholder="Ej: GrupoA"></div>
     <div class="form-group"><label data-i18n="enterPin">PIN</label>
-      <input type="text" id="joinPin" placeholder="Ej: 1234">
-    </div>
-    <button class="modal-btn primary" onclick="joinRoom()" data-i18n="joinBtn">Unirse →</button>
+      <input type="text" id="joinPin" placeholder="Ej: 1234"></div>
+    <button class="modal-btn primary" id="joinRoomBtn" onclick="joinRoom()" data-i18n="joinBtn">Unirse →</button>
     <button class="modal-btn secondary" onclick="closeModal('joinRoom')" data-i18n="cancel">Cancelar</button>
   </div>
 </div>
 
-<!-- Room Info -->
 <div class="modal-overlay" id="roomInfoModal">
   <div class="modal">
     <div class="modal-title"><span class="title-icon">ℹ️</span><span id="roomInfoTitle">Info de sala</span>
-      <button class="modal-close" onclick="closeModal('roomInfo')">✕</button>
-    </div>
+      <button class="modal-close" onclick="closeModal('roomInfo')">✕</button></div>
     <div class="modal-info">
       <div class="label" data-i18n="roomCodeLabel">CÓDIGO DE SALA</div>
       <div class="value" id="roomInfoCode">—</div>
@@ -516,20 +514,41 @@
   <div class="call-status" id="callStatus">Llamada de video</div>
   <div class="call-timer" id="callTimer">00:00</div>
   <div class="call-controls">
-    <button class="call-control-btn mute" id="muteBtn" onclick="toggleMute()" title="Silenciar">🎤</button>
-    <button class="call-control-btn video-on" id="videoBtn" onclick="toggleVideo()" title="Cámara">📹</button>
-    <button class="call-control-btn mute" onclick="toggleScreenShare()" title="Pantalla">🖥️</button>
+    <button class="call-control-btn mute" id="muteBtn" onclick="toggleMute()">🎤</button>
+    <button class="call-control-btn video-on" id="videoBtn" onclick="toggleVideo()">📹</button>
+    <button class="call-control-btn mute" onclick="toggleScreenShare()">🖥️</button>
     <button class="call-control-btn end" onclick="endCall()">📵</button>
   </div>
+</div>
+
+<!-- IMAGE VIEWER -->
+<div id="imageViewer" onclick="this.classList.remove('open')">
+  <img id="viewerImg" src="">
 </div>
 
 <!-- TOAST -->
 <div id="toast">✓ Copiado al portapapeles</div>
 
 <script>
-// ═══════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
+// FIREBASE INIT
+// ═══════════════════════════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "AIzaSyCJ0H7yJtn1MbDttfw8wXzYwikoCIreb4Q",
+  authDomain: "chat-zone-l.firebaseapp.com",
+  databaseURL: "https://chat-zone-l-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "chat-zone-l",
+  storageBucket: "chat-zone-l.firebasestorage.app",
+  messagingSenderId: "741290139587",
+  appId: "1:741290139587:web:fbbd381868c836c8be2776"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// ═══════════════════════════════════════════════════════════
 // i18n
-// ═══════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 const i18n = {
   es: {
     login:'Iniciar sesión', register:'Registrarse', username:'Usuario', password:'Contraseña',
@@ -547,13 +566,14 @@ const i18n = {
     sharingScreen:'Compartiendo pantalla', welcomeTitle:'Bienvenido a ChatZone',
     welcomeDesc:'Únete a una sala o crea una nueva para empezar a chatear.',
     onlineSub:'En línea', logoSub:'Tu espacio para conectar',
-    membersOnline:'miembros · en línea', typingText:'está escribiendo...',
+    membersOnline:'miembros · en línea', newMsgs:'Nuevos mensajes',
     joinedRoom:'entró a la sala', leftRoom:'salió de la sala',
     messagePlaceholder:'Escribe un mensaje...',
     errorUserExists:'Ese nombre de usuario ya existe', errorShort:'Contraseña demasiado corta (min. 6)',
     errorInvalid:'Usuario o contraseña incorrectos', errorFill:'Rellena todos los campos',
     errorRoomExists:'Ese código de sala ya existe', errorRoomNotFound:'Sala no encontrada o PIN incorrecto',
-    copiedInvite:'¡Invitación copiada!'
+    copiedInvite:'¡Invitación copiada!', connOnline:'En línea', connOffline:'Desconectado',
+    errorFirebase:'Error de conexión. Intenta de nuevo.', errorFileBig:'Archivo muy grande (máx. 2 MB)'
   },
   en: {
     login:'Sign in', register:'Sign up', username:'Username', password:'Password',
@@ -562,7 +582,7 @@ const i18n = {
     newRoom:'New room', logout:'Log out', createRoom:'Create room', joinRoom:'Join with code',
     videoCall:'Video', shareScreen:'Screen', attach:'Attach', media:'Photo/Video',
     createRoomTitle:'Create new room', roomName:'Room name',
-    roomCode:'Room code (to invite)', roomPin:'Secret PIN', roomIcon2:'Room icon',
+    roomCode:'Room code', roomPin:'Secret PIN', roomIcon2:'Room icon',
     createBtn:'Create room →', cancel:'Cancel', joinRoomTitle:'Join a room',
     enterCode:'Room code', enterPin:'PIN', joinBtn:'Join →',
     roomCodeLabel:'ROOM CODE', roomPinLabel:'PIN',
@@ -571,13 +591,14 @@ const i18n = {
     sharingScreen:'Sharing screen', welcomeTitle:'Welcome to ChatZone',
     welcomeDesc:'Join a room or create a new one to start chatting with friends.',
     onlineSub:'Online', logoSub:'Your space to connect',
-    membersOnline:'members · online', typingText:'is typing...',
+    membersOnline:'members · online', newMsgs:'New messages',
     joinedRoom:'joined the room', leftRoom:'left the room',
     messagePlaceholder:'Type a message...',
     errorUserExists:'That username already exists', errorShort:'Password too short (min. 6)',
     errorInvalid:'Incorrect username or password', errorFill:'Please fill in all fields',
     errorRoomExists:'That room code already exists', errorRoomNotFound:'Room not found or wrong PIN',
-    copiedInvite:'Invite copied!'
+    copiedInvite:'Invite copied!', connOnline:'Online', connOffline:'Offline',
+    errorFirebase:'Connection error. Try again.', errorFileBig:'File too large (max 2 MB)'
   }
 };
 let lang = 'es';
@@ -590,441 +611,880 @@ function setLang(l) {
   });
   document.getElementById('logoSub').textContent = i18n[lang].logoSub;
   document.getElementById('msgInput').placeholder = i18n[lang].messagePlaceholder;
-  document.getElementById('sidebarStatus').textContent = i18n[lang].onlineSub;
 }
 
-// ═══════════════════════════════════════
-// STATE (localStorage)
-// ═══════════════════════════════════════
-let state = {
-  users: {},    // {username: {pass, avatar}}
-  rooms: {},    // {code: {name, code, pin, icon, owner, members:[], messages:[]}}
-  currentUser: null,
-  currentRoom: null
-};
+// ═══════════════════════════════════════════════════════════
+// ESTADO GLOBAL
+// ═══════════════════════════════════════════════════════════
+let currentUser = null;
+let currentRoom = null;
+let currentUserData = null;
+let cachedRooms = {};       // { code: roomData } cache de salas
+let roomLastMessages = {};  // { code: {text, sender} } último mensaje por sala
+let onlineUsers = new Set();
+let isFirebaseConnected = false;
 
-function saveState() { localStorage.setItem('chatzone_state', JSON.stringify(state)); }
-function loadState() {
-  const s = localStorage.getItem('chatzone_state');
-  if(s) state = JSON.parse(s);
-  const u = localStorage.getItem('chatzone_session');
-  if(u && state.users[u]) state.currentUser = u;
-}
+// Listeners de Firebase (para poder desatarlos)
+let roomsListenerCb = null;
+let msgAddedCb = null;
+let msgChangedCb = null;
+let activeMsgRef = null;
 
-// ═══════════════════════════════════════
-// AVATARS / EMOJIS
-// ═══════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
+// AVATARS / EMOJIS / ICONOS
+// ═══════════════════════════════════════════════════════════
 const AVATARS = ['😊','😎','🤩','🥳','😄','🤓','🐱','🐶','🦊','🐼','🐸','🦁','🚀','⚡','🌙','🎮','🎸','🎯','💎','🔥'];
 const ROOM_ICONS = ['💬','🎮','🎵','📚','🏆','⚡','🌙','🚀','🎯','🔥','💡','🎲','🌍','🎪','🦄'];
+const EMOJIS = ['😀','😂','🥰','😎','🤔','😅','😍','🤩','😭','😡','👍','👎','❤️','🔥','✨','🎉','👏','🙌','💯','⚡','🎮','🚀','😈','🤣','😇','🥳','💪','👀','🤝','🫡'];
 let selectedAvatar = AVATARS[0];
 let selectedRoomIcon = ROOM_ICONS[0];
 
 function initAvatarPicker() {
-  const p = document.getElementById('avatarPicker');
-  p.innerHTML = AVATARS.map((a,i)=>`<div class="avatar-opt${i===0?' selected':''}" onclick="selectAvatar('${a}',this)">${a}</div>`).join('');
+  document.getElementById('avatarPicker').innerHTML = AVATARS.map((a,i) =>
+    `<div class="avatar-opt${i===0?' selected':''}" onclick="selectAvatar('${a}',this)">${a}</div>`
+  ).join('');
 }
 function selectAvatar(a, el) {
   selectedAvatar = a;
-  document.querySelectorAll('.avatar-opt').forEach(e=>e.classList.remove('selected'));
+  document.querySelectorAll('#avatarPicker .avatar-opt').forEach(e=>e.classList.remove('selected'));
   el.classList.add('selected');
 }
 function initRoomIconPicker() {
-  const p = document.getElementById('roomIconPicker');
-  p.innerHTML = ROOM_ICONS.map((a,i)=>`<div class="avatar-opt${i===0?' selected':''}" onclick="selectRoomIcon('${a}',this)">${a}</div>`).join('');
+  document.getElementById('roomIconPicker').innerHTML = ROOM_ICONS.map((a,i) =>
+    `<div class="avatar-opt${i===0?' selected':''}" onclick="selectRoomIcon('${a}',this)">${a}</div>`
+  ).join('');
 }
 function selectRoomIcon(a, el) {
   selectedRoomIcon = a;
   document.querySelectorAll('#roomIconPicker .avatar-opt').forEach(e=>e.classList.remove('selected'));
   el.classList.add('selected');
 }
+function initEmojis() {
+  document.getElementById('emojiBar').innerHTML = EMOJIS.map(e =>
+    `<div class="emoji-item" onclick="insertEmoji('${e}')">${e}</div>`
+  ).join('');
+}
+function toggleEmoji() { document.getElementById('emojiBar').classList.toggle('open'); }
+function insertEmoji(e) { const i = document.getElementById('msgInput'); i.value += e; i.focus(); }
 
-// ═══════════════════════════════════════
-// AUTH
-// ═══════════════════════════════════════
-function switchTab(tab) {
-  document.getElementById('loginForm').style.display = tab==='login' ? '' : 'none';
-  document.getElementById('registerForm').style.display = tab==='register' ? '' : 'none';
-  document.getElementById('tabLogin').classList.toggle('active', tab==='login');
-  document.getElementById('tabRegister').classList.toggle('active', tab==='register');
-  document.getElementById('authError').style.display = 'none';
+// ═══════════════════════════════════════════════════════════
+// HASH DE CONTRASEÑA (SHA-256)
+// ═══════════════════════════════════════════════════════════
+async function hashPass(password) {
+  try {
+    const data = new TextEncoder().encode(password + '_chatzone_2024_salt');
+    const hash = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2,'0')).join('');
+  } catch(e) {
+    // Fallback si crypto.subtle no está disponible (HTTP inseguro)
+    let h = 0;
+    for (let i = 0; i < password.length; i++) {
+      h = ((h << 5) - h + password.charCodeAt(i)) | 0;
+    }
+    return 'f_' + Math.abs(h).toString(36);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// UTILIDADES
+// ═══════════════════════════════════════════════════════════
+function escapeHtml(t) {
+  return (t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
+function formatTime(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+}
+function handleKey(e) {
+  if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
 }
 function showError(msg) {
   const e = document.getElementById('authError');
   e.textContent = msg; e.style.display = 'block';
 }
-function doLogin() {
-  const u = document.getElementById('loginUser').value.trim();
-  const p = document.getElementById('loginPass').value;
-  if(!u||!p) { showError(i18n[lang].errorFill); return; }
-  if(!state.users[u] || state.users[u].pass !== p) { showError(i18n[lang].errorInvalid); return; }
-  state.currentUser = u;
-  localStorage.setItem('chatzone_session', u);
-  enterApp();
+function hideError() { document.getElementById('authError').style.display = 'none'; }
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.innerHTML = '✓ ' + msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
 }
-function doRegister() {
-  const u = document.getElementById('regUser').value.trim();
-  const p = document.getElementById('regPass').value;
-  if(!u||!p) { showError(i18n[lang].errorFill); return; }
-  if(p.length < 6) { showError(i18n[lang].errorShort); return; }
-  if(state.users[u]) { showError(i18n[lang].errorUserExists); return; }
-  state.users[u] = { pass: p, avatar: selectedAvatar };
-  state.currentUser = u;
-  localStorage.setItem('chatzone_session', u);
-  saveState();
-  enterApp();
+function setLoading(btnId, loading) {
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  btn.disabled = loading;
+  if (loading) btn.innerHTML = '<span class="spinner"></span>';
+  else btn.innerHTML = btn.getAttribute('data-i18n') ? i18n[lang][btn.getAttribute('data-i18n')] : btn.textContent;
 }
+function isNearBottom() {
+  const el = document.getElementById('messages');
+  return el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+}
+function scrollToBottom() {
+  const el = document.getElementById('messages');
+  el.scrollTop = el.scrollHeight;
+  document.getElementById('newMsgBtn').style.display = 'none';
+}
+
+// ═══════════════════════════════════════════════════════════
+// AUTH
+// ═══════════════════════════════════════════════════════════
+function switchTab(tab) {
+  document.getElementById('loginForm').style.display = tab==='login' ? '' : 'none';
+  document.getElementById('registerForm').style.display = tab==='register' ? '' : 'none';
+  document.getElementById('tabLogin').classList.toggle('active', tab==='login');
+  document.getElementById('tabRegister').classList.toggle('active', tab==='register');
+  hideError();
+}
+
+async function doLogin() {
+  hideError();
+  const username = document.getElementById('loginUser').value.trim();
+  const password = document.getElementById('loginPass').value;
+  if (!username || !password) { showError(i18n[lang].errorFill); return; }
+
+  setLoading('loginBtn', true);
+  try {
+    const hashed = await hashPass(password);
+    const snap = await db.ref('users/' + username).once('value');
+    const data = snap.val();
+
+    if (!data || data.pass !== hashed) {
+      showError(i18n[lang].errorInvalid);
+      setLoading('loginBtn', false);
+      return;
+    }
+
+    currentUser = username;
+    currentUserData = data;
+    localStorage.setItem('chatzone_session', username);
+    enterApp();
+  } catch(e) {
+    showError(i18n[lang].errorFirebase);
+  }
+  setLoading('loginBtn', false);
+}
+
+async function doRegister() {
+  hideError();
+  const username = document.getElementById('regUser').value.trim();
+  const password = document.getElementById('regPass').value;
+  if (!username || !password) { showError(i18n[lang].errorFill); return; }
+  if (password.length < 6) { showError(i18n[lang].errorShort); return; }
+
+  setLoading('regBtn', true);
+  try {
+    const hashed = await hashPass(password);
+    const userRef = db.ref('users/' + username);
+
+    // Transacción: si el usuario ya existe, aborta
+    const result = await new Promise((resolve, reject) => {
+      userRef.transaction(currentData => {
+        if (currentData !== null) return undefined; // Abortar si existe
+        return {
+          pass: hashed,
+          avatar: selectedAvatar,
+          online: true,
+          lastSeen: firebase.database.ServerValue.TIMESTAMP
+        };
+      }, (error, committed) => {
+        if (error) reject(error);
+        else resolve(committed);
+      });
+    });
+
+    if (!result) {
+      showError(i18n[lang].errorUserExists);
+      setLoading('regBtn', false);
+      return;
+    }
+
+    currentUser = username;
+    currentUserData = { pass: hashed, avatar: selectedAvatar, online: true };
+    localStorage.setItem('chatzone_session', username);
+    enterApp();
+  } catch(e) {
+    showError(i18n[lang].errorFirebase);
+  }
+  setLoading('regBtn', false);
+}
+
 function doLogout() {
-  state.currentUser = null;
-  state.currentRoom = null;
+  // Limpiar presencia
+  if (currentUser) {
+    db.ref('users/' + currentUser + '/online').set(false);
+    db.ref('users/' + currentUser + '/lastSeen').set(firebase.database.ServerValue.TIMESTAMP);
+  }
+  detachAllListeners();
+  currentUser = null;
+  currentRoom = null;
+  currentUserData = null;
+  cachedRooms = {};
+  roomLastMessages = {};
   localStorage.removeItem('chatzone_session');
   document.getElementById('app').style.display = 'none';
   document.getElementById('authScreen').style.display = 'flex';
   document.getElementById('langToggle').style.display = 'flex';
 }
-function enterApp() {
+
+async function enterApp() {
   document.getElementById('authScreen').style.display = 'none';
   document.getElementById('langToggle').style.display = 'none';
   document.getElementById('app').style.display = 'block';
-  const u = state.currentUser;
-  const avatar = state.users[u]?.avatar || '😊';
-  document.getElementById('sidebarAvatarEmoji').textContent = avatar;
-  document.getElementById('sidebarName').textContent = u;
-  renderRooms();
+
+  document.getElementById('sidebarAvatarEmoji').textContent = currentUserData.avatar || '😊';
+  document.getElementById('sidebarName').textContent = currentUser;
+
+  setupPresence();
+  listenConnection();
+  listenRooms();
   showWelcome();
 }
 
-// ═══════════════════════════════════════
-// ROOMS
-// ═══════════════════════════════════════
-function createRoom() {
-  const name = document.getElementById('newRoomName').value.trim();
-  const code = document.getElementById('newRoomCode').value.trim();
-  const pin  = document.getElementById('newRoomPin').value.trim();
-  if(!name||!code||!pin) { alert(i18n[lang].errorFill); return; }
-  if(state.rooms[code]) { alert(i18n[lang].errorRoomExists); return; }
-  state.rooms[code] = {
-    name, code, pin, icon: selectedRoomIcon,
-    owner: state.currentUser,
-    members: [state.currentUser],
-    messages: [{ type:'system', text: state.currentUser + ' creó la sala', ts: Date.now() }]
+// ═══════════════════════════════════════════════════════════
+// PRESENCIA (online/offline)
+// ═══════════════════════════════════════════════════════════
+function setupPresence() {
+  const userRef = db.ref('users/' + currentUser);
+  userRef.update({ online: true, lastSeen: firebase.database.ServerValue.TIMESTAMP });
+  // Si se pierde la conexión, Firebase ejecuta esto automáticamente
+  userRef.onDisconnect().update({ online: false, lastSeen: firebase.database.ServerValue.TIMESTAMP });
+}
+
+function listenConnection() {
+  db.ref('.info/connected').on('value', snap => {
+    isFirebaseConnected = snap.val() === true;
+    const dot = document.getElementById('connDot');
+    const statusText = document.getElementById('statusText');
+    const onlineDot = document.getElementById('onlineDot');
+    if (isFirebaseConnected) {
+      dot.className = 'conn-dot on';
+      statusText.textContent = i18n[lang].connOnline;
+      onlineDot.classList.remove('offline');
+      // Re-marcar online al reconectar
+      if (currentUser) {
+        db.ref('users/' + currentUser).update({ online: true });
+      }
+    } else {
+      dot.className = 'conn-dot off';
+      statusText.textContent = i18n[lang].connOffline;
+      onlineDot.classList.add('offline');
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// SALAS - LISTENER EN TIEMPO REAL
+// ═══════════════════════════════════════════════════════════
+function listenRooms() {
+  // Escuchar cambios en todas las salas
+  roomsListenerCb = snap => {
+    cachedRooms = snap.val() || {};
+    renderRooms();
   };
-  saveState();
-  closeModal('createRoom');
-  renderRooms();
-  openRoom(code);
+  db.ref('rooms').on('value', roomsListenerCb);
+
+  // Escuchar usuarios online para contar miembros conectados
+  db.ref('users').orderByChild('online').equalTo(true).on('value', snap => {
+    onlineUsers = new Set(Object.keys(snap.val() || {}));
+    renderRooms();
+    if (currentRoom) updateChatHeader();
+  });
 }
-function joinRoom() {
-  const code = document.getElementById('joinCode').value.trim();
-  const pin  = document.getElementById('joinPin').value.trim();
-  if(!code||!pin) { alert(i18n[lang].errorFill); return; }
-  const room = state.rooms[code];
-  if(!room || room.pin !== pin) { alert(i18n[lang].errorRoomNotFound); return; }
-  if(!room.members.includes(state.currentUser)) {
-    room.members.push(state.currentUser);
-    room.messages.push({ type:'system', text: state.currentUser + ' ' + i18n[lang].joinedRoom, ts: Date.now() });
+
+function detachAllListeners() {
+  if (roomsListenerCb) {
+    db.ref('rooms').off('value', roomsListenerCb);
+    roomsListenerCb = null;
   }
-  saveState();
-  closeModal('joinRoom');
-  renderRooms();
-  openRoom(code);
-}
-function leaveRoom() {
-  const code = state.currentRoom;
-  if(!code) return;
-  const room = state.rooms[code];
-  if(!room) return;
-  room.members = room.members.filter(m => m !== state.currentUser);
-  room.messages.push({ type:'system', text: state.currentUser + ' ' + i18n[lang].leftRoom, ts: Date.now() });
-  if(room.owner === state.currentUser && room.members.length > 0) room.owner = room.members[0];
-  if(room.members.length === 0) delete state.rooms[code];
-  state.currentRoom = null;
-  saveState();
-  closeModal('roomInfo');
-  renderRooms();
-  showWelcome();
+  detachMessagesListener();
 }
 
 function renderRooms() {
   const list = document.getElementById('roomsList');
-  const q = document.getElementById('searchInput').value.toLowerCase();
-  const myRooms = Object.values(state.rooms).filter(r =>
-    r.members.includes(state.currentUser) && (!q || r.name.toLowerCase().includes(q) || r.code.toLowerCase().includes(q))
+  const q = (document.getElementById('searchInput').value || '').toLowerCase();
+
+  // Filtrar salas donde el usuario actual es miembro
+  const myRooms = Object.entries(cachedRooms).filter(([code, room]) =>
+    room.members && room.members[currentUser] &&
+    (!q || room.name.toLowerCase().includes(q) || code.toLowerCase().includes(q))
   );
-  list.innerHTML = myRooms.length === 0
-    ? `<div style="padding:1rem;color:var(--text3);font-size:.85rem;text-align:center">Sin salas aún</div>`
-    : myRooms.map(r => {
-        const lastMsg = r.messages[r.messages.length-1];
-        const last = lastMsg ? (lastMsg.type==='system' ? lastMsg.text : lastMsg.sender+': '+lastMsg.text) : '';
-        return `<div class="room-item${state.currentRoom===r.code?' active':''}" onclick="openRoom('${r.code}')">
-          <div class="room-icon">${r.icon}</div>
-          <div class="room-info">
-            <div class="room-name">${r.name}</div>
-            <div class="room-last">${last.substring(0,40)}</div>
-          </div>
-        </div>`;
-      }).join('');
+
+  if (myRooms.length === 0) {
+    list.innerHTML = `<div style="padding:1rem;color:var(--text3);font-size:.85rem;text-align:center">${lang==='es'?'Sin salas aún':'No rooms yet'}</div>`;
+    return;
+  }
+
+  list.innerHTML = myRooms.map(([code, room]) => {
+    const last = roomLastMessages[code];
+    let lastText = '';
+    if (last) {
+      lastText = last.sender ? last.sender + ': ' + (last.text || '') : (last.text || '');
+    }
+    const memberCount = room.members ? Object.keys(room.members).length : 0;
+    const onlineCount = room.members ? Object.keys(room.members).filter(m => onlineUsers.has(m)).length : 0;
+
+    return `<div class="room-item${currentRoom===code?' active':''}" onclick="openRoom('${code}')">
+      <div class="room-icon">${room.icon || '💬'}</div>
+      <div class="room-info">
+        <div class="room-name">${escapeHtml(room.name)}</div>
+        <div class="room-last">${escapeHtml(lastText).substring(0,40)}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Cargar último mensaje para salas que no lo tienen
+  myRooms.forEach(([code]) => {
+    if (!roomLastMessages[code]) fetchLastMessage(code);
+  });
 }
+
+async function fetchLastMessage(code) {
+  try {
+    const snap = await db.ref('rooms/' + code + '/messages').orderByChild('ts').limitToLast(1).once('value');
+    snap.forEach(child => {
+      const msg = child.val();
+      roomLastMessages[code] = {
+        text: msg.type === 'system' ? msg.text : (msg.text || (msg.mediaType ? '[Media]' : '')),
+        sender: msg.sender || ''
+      };
+      renderRooms();
+    });
+  } catch(e) { /* ignorar */ }
+}
+
 function filterRooms() { renderRooms(); }
 
-function openRoom(code) {
-  state.currentRoom = code;
-  const room = state.rooms[code];
-  if(!room) return;
-  document.getElementById('welcomeState').style.display = 'none';
-  const view = document.getElementById('activeChatView');
-  view.style.display = 'flex';
-  document.getElementById('chatRoomIcon').textContent = room.icon;
-  document.getElementById('chatRoomName').textContent = room.name;
-  document.getElementById('chatRoomSub').textContent = room.members.length + ' ' + i18n[lang].membersOnline;
-  renderMessages();
-  renderRooms();
+// ═══════════════════════════════════════════════════════════
+// SALAS - CREAR / UNIRSE / SALIR
+// ═══════════════════════════════════════════════════════════
+async function createRoom() {
+  const name = document.getElementById('newRoomName').value.trim();
+  const code = document.getElementById('newRoomCode').value.trim();
+  const pin  = document.getElementById('newRoomPin').value.trim();
+  if (!name || !code || !pin) { alert(i18n[lang].errorFill); return; }
+
+  setLoading('createRoomBtn', true);
+  try {
+    const roomRef = db.ref('rooms/' + code);
+
+    // Transacción para evitar código duplicado
+    const committed = await new Promise((resolve, reject) => {
+      roomRef.transaction(current => {
+        if (current !== null) return undefined;
+        return {
+          name, code, pin, icon: selectedRoomIcon,
+          owner: currentUser,
+          createdAt: firebase.database.ServerValue.TIMESTAMP,
+          members: { [currentUser]: true }
+        };
+      }, (error, committed) => {
+        if (error) reject(error);
+        else resolve(committed);
+      });
+    });
+
+    if (!committed) {
+      alert(i18n[lang].errorRoomExists);
+      setLoading('createRoomBtn', false);
+      return;
+    }
+
+    // Mensaje de sistema
+    await roomRef.child('messages').push({
+      type: 'system',
+      text: currentUser + ' creó la sala',
+      ts: firebase.database.ServerValue.TIMESTAMP
+    });
+
+    closeModal('createRoom');
+    // Limpiar formulario
+    document.getElementById('newRoomName').value = '';
+    document.getElementById('newRoomCode').value = '';
+    document.getElementById('newRoomPin').value = '';
+    selectedRoomIcon = ROOM_ICONS[0];
+
+    openRoom(code);
+  } catch(e) {
+    alert(i18n[lang].errorFirebase);
+  }
+  setLoading('createRoomBtn', false);
 }
+
+async function joinRoom() {
+  const code = document.getElementById('joinCode').value.trim();
+  const pin  = document.getElementById('joinPin').value.trim();
+  if (!code || !pin) { alert(i18n[lang].errorFill); return; }
+
+  setLoading('joinRoomBtn', true);
+  try {
+    const snap = await db.ref('rooms/' + code).once('value');
+    const room = snap.val();
+
+    if (!room || room.pin !== pin) {
+      alert(i18n[lang].errorRoomNotFound);
+      setLoading('joinRoomBtn', false);
+      return;
+    }
+
+    // Agregar como miembro si no lo es
+    if (!room.members || !room.members[currentUser]) {
+      await db.ref('rooms/' + code + '/members/' + currentUser).set(true);
+      await db.ref('rooms/' + code + '/messages').push({
+        type: 'system',
+        text: currentUser + ' ' + i18n[lang].joinedRoom,
+        ts: firebase.database.ServerValue.TIMESTAMP
+      });
+    }
+
+    closeModal('joinRoom');
+    document.getElementById('joinCode').value = '';
+    document.getElementById('joinPin').value = '';
+
+    openRoom(code);
+  } catch(e) {
+    alert(i18n[lang].errorFirebase);
+  }
+  setLoading('joinRoomBtn', false);
+}
+
+async function leaveRoom() {
+  const code = currentRoom;
+  if (!code) return;
+
+  try {
+    // Sacar al usuario de los miembros
+    await db.ref('rooms/' + code + '/members/' + currentUser).remove();
+
+    // Mensaje de sistema
+    await db.ref('rooms/' + code + '/messages').push({
+      type: 'system',
+      text: currentUser + ' ' + i18n[lang].leftRoom,
+      ts: firebase.database.ServerValue.TIMESTAMP
+    });
+
+    // Si la sala queda vacía, eliminarla
+    const membersSnap = await db.ref('rooms/' + code + '/members').once('value');
+    const members = membersSnap.val();
+    if (!members || Object.keys(members).length === 0) {
+      await db.ref('rooms/' + code).remove();
+    } else {
+      // Transferir ownership si era el dueño
+      const roomSnap = await db.ref('rooms/' + code).once('value');
+      const room = roomSnap.val();
+      if (room && room.owner === currentUser) {
+        const newOwner = Object.keys(members)[0];
+        await db.ref('rooms/' + code + '/owner').set(newOwner);
+      }
+    }
+  } catch(e) { /* ignorar */ }
+
+  currentRoom = null;
+  detachMessagesListener();
+  closeModal('roomInfo');
+  showWelcome();
+}
+
+// ═══════════════════════════════════════════════════════════
+// ABRIR SALA / MENSAJES EN TIEMPO REAL
+// ═══════════════════════════════════════════════════════════
+async function openRoom(code) {
+  currentRoom = code;
+  const room = cachedRooms[code];
+  if (!room) return;
+
+  document.getElementById('welcomeState').style.display = 'none';
+  document.getElementById('activeChatView').style.display = 'flex';
+
+  document.getElementById('chatRoomIcon').textContent = room.icon || '💬';
+  document.getElementById('chatRoomName').textContent = room.name;
+  updateChatHeader();
+  renderRooms();
+
+  // Cargar mensajes iniciales y escuchar nuevos
+  await loadInitialMessages(code);
+  listenNewMessages(code);
+}
+
+function updateChatHeader() {
+  const room = cachedRooms[currentRoom];
+  if (!room) return;
+  const memberCount = room.members ? Object.keys(room.members).length : 0;
+  const onlineCount = room.members ? Object.keys(room.members).filter(m => onlineUsers.has(m)).length : 0;
+  document.getElementById('chatRoomSub').textContent =
+    memberCount + ' ' + i18n[lang].membersOnline;
+}
+
+async function loadInitialMessages(code) {
+  const container = document.getElementById('messages');
+  // Limpiar todo excepto el botón de nuevos mensajes
+  const newMsgBtn = document.getElementById('newMsgBtn');
+  container.innerHTML = '';
+  container.appendChild(newMsgBtn);
+  newMsgBtn.style.display = 'none';
+
+  try {
+    const snap = await db.ref('rooms/' + code + '/messages')
+      .orderByChild('ts')
+      .limitToLast(200)
+      .once('value');
+
+    snap.forEach(child => {
+      const msg = { id: child.key, ...child.val() };
+      appendMessageDOM(msg);
+    });
+
+    scrollToBottom();
+  } catch(e) { /* ignorar */ }
+}
+
+function listenNewMessages(code) {
+  detachMessagesListener();
+
+  const ref = db.ref('rooms/' + code + '/messages').orderByChild('ts');
+  activeMsgRef = ref;
+
+  // Nuevo mensaje
+  msgAddedCb = snap => {
+    const msgId = snap.key;
+    // Si ya existe en el DOM, ignorar (fue cargado inicialmente)
+    if (document.getElementById('msg_' + msgId)) return;
+
+    const msg = { id: msgId, ...snap.val() };
+    appendMessageDOM(msg);
+
+    // Actualizar último mensaje en la lista de salas
+    roomLastMessages[code] = {
+      text: msg.type === 'system' ? msg.text : (msg.text || (msg.mediaType ? '[Media]' : '')),
+      sender: msg.sender || ''
+    };
+    renderRooms();
+
+    // Auto-scroll si estamos abajo
+    if (isNearBottom()) {
+      scrollToBottom();
+    } else {
+      document.getElementById('newMsgBtn').style.display = 'block';
+    }
+  };
+  ref.on('child_added', msgAddedCb);
+
+  // Cambios en mensajes (reacciones)
+  msgChangedCb = snap => {
+    const msg = snap.val();
+    const el = document.getElementById('reactions_' + snap.key);
+    if (el && msg.reactions) {
+      el.innerHTML = buildReactionsHTML(msg.reactions, snap.key);
+    }
+  };
+  ref.on('child_changed', msgChangedCb);
+}
+
+function detachMessagesListener() {
+  if (activeMsgRef) {
+    if (msgAddedCb) activeMsgRef.off('child_added', msgAddedCb);
+    if (msgChangedCb) activeMsgRef.off('child_changed', msgChangedCb);
+    activeMsgRef = null;
+    msgAddedCb = null;
+    msgChangedCb = null;
+  }
+}
+
 function showWelcome() {
-  state.currentRoom = null;
+  currentRoom = null;
+  detachMessagesListener();
   document.getElementById('welcomeState').style.display = '';
   document.getElementById('activeChatView').style.display = 'none';
   renderRooms();
 }
 
-// ═══════════════════════════════════════
-// MESSAGES
-// ═══════════════════════════════════════
-function renderMessages() {
-  const code = state.currentRoom;
-  if(!code) return;
-  const room = state.rooms[code];
+// ═══════════════════════════════════════════════════════════
+// RENDERIZAR MENSAJES EN EL DOM
+// ═══════════════════════════════════════════════════════════
+function appendMessageDOM(msg) {
   const container = document.getElementById('messages');
-  container.innerHTML = '';
-  (room.messages||[]).forEach(m => {
-    if(m.type==='system') {
-      const d = document.createElement('div');
-      d.className = 'system-msg'; d.textContent = m.text;
-      container.appendChild(d); return;
-    }
-    const isMe = m.sender === state.currentUser;
-    const userAvatar = state.users[m.sender]?.avatar || '😊';
-    const row = document.createElement('div');
-    row.className = 'msg-row' + (isMe?' mine':'');
-    let bubbleContent = '';
-    if(m.mediaType==='image') {
-      bubbleContent = `<img class="msg-img" src="${m.content}" onclick="viewImage('${m.content}')">`;
-    } else if(m.mediaType==='video') {
-      bubbleContent = `<video class="msg-video" controls src="${m.content}"></video>`;
-    } else if(m.mediaType==='file') {
-      bubbleContent = `<div class="msg-file"><span>📎</span><span>${m.fileName||'Archivo'}</span></div>`;
-    } else {
-      bubbleContent = `<div class="msg-bubble">${escapeHtml(m.text)}</div>`;
-    }
-    row.innerHTML = `
-      ${!isMe ? `<div class="msg-avatar">${userAvatar}</div>` : ''}
-      <div class="msg-content">
-        ${!isMe ? `<div class="msg-sender">${m.sender}</div>` : ''}
-        ${bubbleContent}
-        <div class="msg-time">${formatTime(m.ts)}</div>
-        <div class="msg-reactions" id="reactions_${m.id}"></div>
-      </div>
-      ${isMe ? `<div class="msg-avatar">${userAvatar}</div>` : ''}
-    `;
-    container.appendChild(row);
-    if(m.reactions && Object.keys(m.reactions).length>0) renderReactions(m);
-  });
-  container.scrollTop = container.scrollHeight;
+  const newMsgBtn = document.getElementById('newMsgBtn');
+
+  if (msg.type === 'system') {
+    const d = document.createElement('div');
+    d.className = 'system-msg';
+    d.textContent = msg.text;
+    container.insertBefore(d, newMsgBtn);
+    return;
+  }
+
+  const isMe = msg.sender === currentUser;
+  const userAvatar = getUserAvatar(msg.sender);
+
+  const row = document.createElement('div');
+  row.className = 'msg-row' + (isMe ? ' mine' : '');
+  row.id = 'msg_' + msg.id;
+
+  let bubbleContent = '';
+  if (msg.mediaType === 'image') {
+    bubbleContent = `<img class="msg-img" src="${msg.content}" onclick="viewImage(this.src)" loading="lazy">`;
+  } else if (msg.mediaType === 'video') {
+    bubbleContent = `<video class="msg-video" controls src="${msg.content}" preload="metadata"></video>`;
+  } else if (msg.mediaType === 'file') {
+    bubbleContent = `<div class="msg-file"><span>📎</span><span>${escapeHtml(msg.fileName || 'Archivo')}</span></div>`;
+  } else {
+    bubbleContent = `<div class="msg-bubble">${escapeHtml(msg.text)}</div>`;
+  }
+
+  const reactionsHtml = (msg.reactions && Object.keys(msg.reactions).length > 0)
+    ? buildReactionsHTML(msg.reactions, msg.id) : '';
+
+  row.innerHTML = `
+    ${!isMe ? `<div class="msg-avatar">${userAvatar}</div>` : ''}
+    <div class="msg-content">
+      ${!isMe ? `<div class="msg-sender">${escapeHtml(msg.sender)}</div>` : ''}
+      ${bubbleContent}
+      <div class="msg-time">${formatTime(msg.ts)}</div>
+      <div class="msg-reactions" id="reactions_${msg.id}">${reactionsHtml}</div>
+    </div>
+    ${isMe ? `<div class="msg-avatar">${userAvatar}</div>` : ''}
+  `;
+
+  container.insertBefore(row, newMsgBtn);
 }
 
-function sendMessage() {
-  const code = state.currentRoom;
-  if(!code) return;
+function getUserAvatar(username) {
+  // Buscar en cache de salas (los miembros tienen avatares en /users)
+  // Para no hacer demasiadas lecturas, usamos un cache local
+  if (!userAvatarCache[username]) {
+    userAvatarCache[username] = '😊';
+    // Precargar avatar desde Firebase
+    db.ref('users/' + username + '/avatar').once('value').then(snap => {
+      if (snap.val()) {
+        userAvatarCache[username] = snap.val();
+        // Actualizar todos los avatares de este usuario en el DOM
+        document.querySelectorAll('.msg-avatar').forEach(el => {
+          if (el.textContent === userAvatarCache[username] || el.dataset.user === username) {
+            // No actualizar si ya es el correcto
+          }
+        });
+        // Re-renderizar es más simple
+        if (currentRoom) loadInitialMessages(currentRoom);
+      }
+    });
+  }
+  return userAvatarCache[username];
+}
+let userAvatarCache = {};
+
+function buildReactionsHTML(reactions, msgId) {
+  if (!reactions) return '';
+  const counts = {};
+  Object.values(reactions).forEach(e => { counts[e] = (counts[e] || 0) + 1; });
+  return Object.entries(counts).map(([emoji, count]) =>
+    `<div class="reaction-pill${reactions[currentUser]===emoji?' mine':''}"
+         onclick="toggleReaction('${msgId}','${emoji}')">${emoji} ${count}</div>`
+  ).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+// ENVIAR MENSAJE
+// ═══════════════════════════════════════════════════════════
+async function sendMessage() {
+  if (!currentRoom) return;
   const input = document.getElementById('msgInput');
   const text = input.value.trim();
-  if(!text) return;
-  const room = state.rooms[code];
-  const msg = { id: Date.now().toString(), sender: state.currentUser, text, ts: Date.now(), reactions: {} };
-  room.messages.push(msg);
-  saveState();
+  if (!text) return;
+
   input.value = '';
   input.style.height = 'auto';
-  renderMessages();
-  renderRooms();
+
+  try {
+    await db.ref('rooms/' + currentRoom + '/messages').push({
+      sender: currentUser,
+      text: text,
+      ts: firebase.database.ServerValue.TIMESTAMP,
+      reactions: {}
+    });
+  } catch(e) {
+    showToast(i18n[lang].errorFirebase);
+  }
 }
 
-function handleFile(e, type) {
+async function handleFile(e, type) {
   const file = e.target.files[0];
-  if(!file) return;
-  const code = state.currentRoom;
-  if(!code) return;
+  if (!file) return;
+  if (!currentRoom) return;
+
+  // Límite de 2MB para base64 en Firebase RTDB
+  if (file.size > 2 * 1024 * 1024) {
+    showToast(i18n[lang].errorFileBig);
+    e.target.value = '';
+    return;
+  }
+
   const reader = new FileReader();
-  reader.onload = (ev) => {
-    const room = state.rooms[code];
-    const msg = {
-      id: Date.now().toString(), sender: state.currentUser, ts: Date.now(),
-      content: ev.target.result, reactions: {},
-      mediaType: type==='media' ? (file.type.startsWith('video') ? 'video' : 'image') : 'file',
-      fileName: file.name, text: ''
-    };
-    room.messages.push(msg);
-    saveState();
-    renderMessages();
-    renderRooms();
+  reader.onload = async (ev) => {
+    try {
+      const mediaType = type === 'media'
+        ? (file.type.startsWith('video') ? 'video' : 'image')
+        : 'file';
+
+      await db.ref('rooms/' + currentRoom + '/messages').push({
+        sender: currentUser,
+        text: '',
+        ts: firebase.database.ServerValue.TIMESTAMP,
+        reactions: {},
+        mediaType: mediaType,
+        content: ev.target.result,
+        fileName: file.name
+      });
+    } catch(err) {
+      showToast(i18n[lang].errorFirebase);
+    }
   };
   reader.readAsDataURL(file);
   e.target.value = '';
 }
 
-function renderReactions(msg) {
-  const el = document.getElementById('reactions_'+msg.id);
-  if(!el) return;
-  const counts = {};
-  Object.values(msg.reactions||{}).forEach(e => { counts[e]=(counts[e]||0)+1; });
-  el.innerHTML = Object.entries(counts).map(([e,c])=>
-    `<div class="reaction-pill${msg.reactions[state.currentUser]===e?' mine':''}" onclick="addReaction('${msg.id}','${e}')">${e} ${c}</div>`
-  ).join('');
+// ═══════════════════════════════════════════════════════════
+// REACCIONES
+// ═══════════════════════════════════════════════════════════
+async function toggleReaction(msgId, emoji) {
+  if (!currentRoom) return;
+  const ref = db.ref('rooms/' + currentRoom + '/messages/' + msgId + '/reactions/' + currentUser);
+
+  try {
+    // Verificar si ya tiene esta reacción
+    const snap = await ref.once('value');
+    if (snap.val() === emoji) {
+      await ref.remove(); // Quitar reacción
+    } else {
+      await ref.set(emoji); // Poner/quitar reacción
+    }
+  } catch(e) { /* ignorar */ }
 }
 
-function addReaction(msgId, emoji) {
-  const code = state.currentRoom;
-  if(!code) return;
-  const room = state.rooms[code];
-  const msg = room.messages.find(m=>m.id===msgId);
-  if(!msg) return;
-  if(!msg.reactions) msg.reactions = {};
-  if(msg.reactions[state.currentUser]===emoji) delete msg.reactions[state.currentUser];
-  else msg.reactions[state.currentUser] = emoji;
-  saveState();
-  renderMessages();
+// ═══════════════════════════════════════════════════════════
+// IMAGE VIEWER
+// ═══════════════════════════════════════════════════════════
+function viewImage(src) {
+  document.getElementById('viewerImg').src = src;
+  document.getElementById('imageViewer').classList.add('open');
 }
 
-// ═══════════════════════════════════════
-// EMOJI PICKER
-// ═══════════════════════════════════════
-const EMOJIS = ['😀','😂','🥰','😎','🤔','😅','😍','🤩','😭','😡','👍','👎','❤️','🔥','✨','🎉','👏','🙌','💯','⚡','🎮','🚀','😈','🤣','😇','🥳','💪','👀','🤝','🫡'];
-function initEmojis() {
-  const bar = document.getElementById('emojiBar');
-  bar.innerHTML = EMOJIS.map(e=>`<div class="emoji-item" onclick="insertEmoji('${e}')">${e}</div>`).join('');
-}
-function toggleEmoji() { document.getElementById('emojiBar').classList.toggle('open'); }
-function insertEmoji(e) { const i = document.getElementById('msgInput'); i.value += e; i.focus(); }
-
-// ═══════════════════════════════════════
-// CALL
-// ═══════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
+// CALL (UI simulada, sin WebRTC)
+// ═══════════════════════════════════════════════════════════
 let callInterval = null;
 let callSeconds = 0;
-let isMuted = false;
-let isVideoOff = false;
-let isSharing = false;
+let isMuted = false, isVideoOff = false, isSharing = false;
 
 function startCall(type) {
-  const code = state.currentRoom;
-  if(!code) return;
-  const room = state.rooms[code];
+  if (!currentRoom) return;
+  const room = cachedRooms[currentRoom];
   document.getElementById('callEmoji').textContent = room.icon;
   document.getElementById('callRoomName').textContent = room.name;
-  document.getElementById('callStatus').textContent = type==='screen' ? i18n[lang].sharingScreen : (lang==='es'?'Llamada de video':'Video call');
-  document.getElementById('shareBar').style.display = type==='screen' ? 'flex' : 'none';
-  isSharing = type==='screen';
+  document.getElementById('callStatus').textContent =
+    type === 'screen' ? i18n[lang].sharingScreen : (lang === 'es' ? 'Llamada de video' : 'Video call');
+  document.getElementById('shareBar').style.display = type === 'screen' ? 'flex' : 'none';
+  isSharing = type === 'screen';
   document.getElementById('callOverlay').classList.add('open');
   callSeconds = 0;
   clearInterval(callInterval);
   callInterval = setInterval(() => {
     callSeconds++;
-    const m = String(Math.floor(callSeconds/60)).padStart(2,'0');
-    const s = String(callSeconds%60).padStart(2,'0');
-    document.getElementById('callTimer').textContent = m+':'+s;
+    const m = String(Math.floor(callSeconds / 60)).padStart(2, '0');
+    const s = String(callSeconds % 60).padStart(2, '0');
+    document.getElementById('callTimer').textContent = m + ':' + s;
   }, 1000);
 }
 function endCall() {
   clearInterval(callInterval);
   document.getElementById('callOverlay').classList.remove('open');
-  isMuted=false; isVideoOff=false; isSharing=false;
-  document.getElementById('muteBtn').textContent='🎤';
-  document.getElementById('videoBtn').textContent='📹';
-  document.getElementById('shareBar').style.display='none';
+  isMuted = false; isVideoOff = false; isSharing = false;
+  document.getElementById('muteBtn').textContent = '🎤';
+  document.getElementById('videoBtn').textContent = '📹';
+  document.getElementById('shareBar').style.display = 'none';
 }
-function toggleMute() {
-  isMuted = !isMuted;
-  document.getElementById('muteBtn').textContent = isMuted ? '🔇' : '🎤';
-}
-function toggleVideo() {
-  isVideoOff = !isVideoOff;
-  document.getElementById('videoBtn').textContent = isVideoOff ? '📷' : '📹';
-}
-function toggleScreenShare() {
-  isSharing = !isSharing;
-  document.getElementById('shareBar').style.display = isSharing ? 'flex' : 'none';
-}
-function viewImage(src) {
-  const w = window.open(); w.document.write(`<body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;height:100vh"><img src="${src}" style="max-width:100%;max-height:100vh"></body>`);
-}
+function toggleMute() { isMuted = !isMuted; document.getElementById('muteBtn').textContent = isMuted ? '🔇' : '🎤'; }
+function toggleVideo() { isVideoOff = !isVideoOff; document.getElementById('videoBtn').textContent = isVideoOff ? '📷' : '📹'; }
+function toggleScreenShare() { isSharing = !isSharing; document.getElementById('shareBar').style.display = isSharing ? 'flex' : 'none'; }
 
-// ═══════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 // MODALS
-// ═══════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 function openModal(name) {
-  if(name==='createRoom') { initRoomIconPicker(); selectedRoomIcon=ROOM_ICONS[0]; }
-  if(name==='roomInfo') {
-    const code = state.currentRoom;
-    const room = state.rooms[code];
-    if(!room) return;
+  if (name === 'createRoom') { initRoomIconPicker(); selectedRoomIcon = ROOM_ICONS[0]; }
+  if (name === 'roomInfo') {
+    const room = cachedRooms[currentRoom];
+    if (!room) return;
     document.getElementById('roomInfoTitle').textContent = room.name;
     document.getElementById('roomInfoCode').textContent = room.code;
     document.getElementById('roomInfoPin').textContent = room.pin;
   }
-  document.getElementById(name+'Modal').classList.add('open');
+  document.getElementById(name + 'Modal').classList.add('open');
 }
-function closeModal(name) { document.getElementById(name+'Modal').classList.remove('open'); }
+function closeModal(name) { document.getElementById(name + 'Modal').classList.remove('open'); }
+
 function copyRoomInfo() {
-  const code = state.currentRoom;
-  const room = state.rooms[code];
-  const text = `🔑 ${lang==='es'?'Únete a':'Join'} ${room.name} en ChatZone\n${lang==='es'?'Código':'Code'}: ${room.code}\nPIN: ${room.pin}`;
-  navigator.clipboard.writeText(text).catch(()=>{});
+  const room = cachedRooms[currentRoom];
+  if (!room) return;
+  const text = `${lang==='es'?'Únete a':'Join'} ${room.name} en ChatZone\n${lang==='es'?'Código':'Code'}: ${room.code}\nPIN: ${room.pin}`;
+  navigator.clipboard.writeText(text).catch(() => {});
   showToast(i18n[lang].copiedInvite);
   closeModal('roomInfo');
 }
 
-// ═══════════════════════════════════════
-// UTILS
-// ═══════════════════════════════════════
-function handleKey(e) {
-  if(e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
-}
-function autoResize(el) {
-  el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,120)+'px';
-}
-function formatTime(ts) {
-  const d = new Date(ts);
-  return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');
-}
-function escapeHtml(t) {
-  return (t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
-}
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.innerHTML = '✓ ' + msg;
-  t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'), 2500);
-}
-
-// Click outside to close modals
+// Cerrar modales al hacer click fuera
 document.querySelectorAll('.modal-overlay').forEach(el => {
-  el.addEventListener('click', e => { if(e.target===el) el.classList.remove('open'); });
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
 });
 
-// ═══════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 // INIT
-// ═══════════════════════════════════════
-loadState();
+// ═══════════════════════════════════════════════════════════
 initAvatarPicker();
 initEmojis();
 
-// Enter key on auth inputs
+// Enter en campos de auth
 ['loginUser','loginPass'].forEach(id => {
-  document.getElementById(id).addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+  document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 });
 ['regUser','regPass'].forEach(id => {
-  document.getElementById(id).addEventListener('keydown', e => { if(e.key==='Enter') doRegister(); });
+  document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') doRegister(); });
 });
 
-if(state.currentUser) { enterApp(); }
+// Auto-login si hay sesión guardada
+(async function init() {
+  const savedUser = localStorage.getItem('chatzone_session');
+  if (savedUser) {
+    try {
+      const snap = await db.ref('users/' + savedUser).once('value');
+      const data = snap.val();
+      if (data) {
+        currentUser = savedUser;
+        currentUserData = data;
+        enterApp();
+      } else {
+        localStorage.removeItem('chatzone_session');
+      }
+    } catch(e) {
+      localStorage.removeItem('chatzone_session');
+    }
+  }
+})();
+
+// Limpiar presencia al cerrar la pestaña
+window.addEventListener('beforeunload', () => {
+  if (currentUser) {
+    // Usar sendBeacon para que se ejecute incluso al cerrar
+    navigator.sendBeacon(
+      db.ref('users/' + currentUser).toString() + '.json',
+      JSON.stringify({ online: false, lastSeen: Date.now() })
+    );
+  }
+});
 </script>
 </body>
 </html>
