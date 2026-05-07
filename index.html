@@ -30,14 +30,8 @@
     --shadow: 0 8px 32px rgba(0,0,0,0.5);
   }
   * { margin:0; padding:0; box-sizing:border-box; }
-  /* Fix mobile: overflow hidden + altura fija sin vh */
-  html, body {
-    height: 100%; overflow: hidden;
-    position: fixed; width: 100%;
-  }
-  body {
-    font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text);
-  }
+  html, body { height:100%; overflow:hidden; position:fixed; width:100%; }
+  body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); }
   button { cursor:pointer; border:none; font-family:'DM Sans',sans-serif; }
   input,textarea { font-family:'DM Sans',sans-serif; }
 
@@ -51,8 +45,7 @@
   .auth-box {
     background:var(--bg2); border:1px solid var(--border); border-radius:24px;
     padding:2.5rem; width:420px; max-width:95vw;
-    box-shadow: 0 0 60px rgba(108,99,255,0.15);
-    margin:1rem 0;
+    box-shadow: 0 0 60px rgba(108,99,255,0.15); margin:1rem 0;
   }
   .logo { text-align:center; margin-bottom:2rem; }
   .logo h1 { font-family:'Syne',sans-serif; font-size:2.2rem; font-weight:800;
@@ -87,7 +80,6 @@
     color:var(--text2); font-size:0.82rem; transition:all .2s; }
   .lang-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
 
-  /* APP — position fixed, no vh */
   #app { display:none; position:fixed; inset:0; z-index:1; }
   .app-layout { display:grid; grid-template-columns:280px 1fr; height:100%; }
 
@@ -136,18 +128,16 @@
   .room-info { flex:1; min-width:0; }
   .room-name { font-weight:500; font-size:0.9rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .room-last { font-size:0.78rem; color:var(--text3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px; }
+  .room-owner-badge { font-size:.65rem; color:var(--accent2); background:rgba(108,99,255,0.15);
+    padding:1px 6px; border-radius:8px; margin-left:6px; flex-shrink:0; }
   .sidebar-bottom { padding:1rem; border-top:1px solid var(--border); display:flex; gap:6px; flex-shrink:0; }
   .sidebar-btn { flex:1; padding:9px; background:var(--bg3); border:1px solid var(--border);
     border-radius:var(--radius-sm); color:var(--text2); font-size:0.82rem; display:flex;
     align-items:center; justify-content:center; gap:6px; transition:all .2s; }
   .sidebar-btn:hover { background:var(--bg4); color:var(--text); border-color:var(--border2); }
 
-  /* CHAT AREA — clave: overflow hidden + min-height 0 */
-  .chat-area {
-    display:flex; flex-direction:column;
-    height:100%; overflow:hidden;
-    background:var(--bg); position:relative;
-  }
+  .chat-area { display:flex; flex-direction:column; height:100%; overflow:hidden;
+    background:var(--bg); position:relative; }
   .chat-header { display:flex; align-items:center; gap:12px; padding:1rem 1.5rem;
     border-bottom:1px solid var(--border); background:var(--bg2); flex-shrink:0; }
   .chat-header-info { flex:1; min-width:0; }
@@ -156,13 +146,8 @@
   .chat-header-sub { font-size:0.8rem; color:var(--text3); margin-top:2px; }
   .chat-header-actions { display:flex; gap:8px; align-items:center; flex-shrink:0; }
 
-  /* MESSAGES — min-height:0 es lo que evita que empuje el input */
-  .messages {
-    flex:1; min-height:0;
-    overflow-y:auto; padding:1.5rem;
-    display:flex; flex-direction:column; gap:4px;
-    position:relative;
-  }
+  .messages { flex:1; min-height:0; overflow-y:auto; padding:1.5rem;
+    display:flex; flex-direction:column; gap:4px; position:relative; }
   .messages::-webkit-scrollbar { width:4px; }
   .messages::-webkit-scrollbar-track { background:transparent; }
   .messages::-webkit-scrollbar-thumb { background:var(--bg4); border-radius:2px; }
@@ -191,11 +176,8 @@
     box-shadow:0 4px 16px rgba(108,99,255,0.4); transition:all .2s; }
   #newMsgBtn:hover { transform:translateX(-50%) translateY(-2px); }
 
-  /* INPUT AREA — flex-shrink:0 para que nunca se achique */
-  .input-area {
-    padding:0.75rem 1rem; border-top:1px solid var(--border);
-    background:var(--bg2); flex-shrink:0;
-  }
+  .input-area { padding:0.75rem 1rem; border-top:1px solid var(--border);
+    background:var(--bg2); flex-shrink:0; }
   .input-toolbar { display:flex; gap:6px; margin-bottom:6px; }
   .toolbar-btn { padding:5px 10px; border-radius:8px; background:var(--bg3); border:1px solid var(--border);
     color:var(--text2); font-size:0.82rem; display:flex; align-items:center; gap:5px; transition:all .2s; }
@@ -228,6 +210,8 @@
   .modal-btn.primary:hover { opacity:.9; transform:translateY(-1px); }
   .modal-btn.secondary { background:var(--bg3); color:var(--text2); border:1px solid var(--border); }
   .modal-btn.secondary:hover { background:var(--bg4); color:var(--text); }
+  .modal-btn.danger { background:rgba(239,68,68,0.15); color:var(--red); border:1px solid rgba(239,68,68,0.3); }
+  .modal-btn.danger:hover { background:rgba(239,68,68,0.25); }
   .modal-info { background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius-sm);
     padding:1rem; margin-bottom:1rem; }
   .modal-info .label { font-size:0.75rem; color:var(--text3); text-transform:uppercase;
@@ -235,6 +219,13 @@
   .modal-info .value { font-family:'Syne',sans-serif; font-size:1.4rem; font-weight:700;
     color:var(--accent2); letter-spacing:.08em; word-break:break-all; }
   .copy-hint { font-size:0.78rem; color:var(--text3); text-align:center; margin-top:.5rem; }
+  .modal-divider { height:1px; background:var(--border); margin:1.25rem 0; }
+
+  /* Confirm modal */
+  .confirm-modal { text-align:center; }
+  .confirm-icon { font-size:3rem; margin-bottom:1rem; }
+  .confirm-text { color:var(--text2); font-size:0.95rem; line-height:1.6; margin-bottom:0.5rem; }
+  .confirm-warning { color:var(--red); font-size:0.85rem; margin-bottom:1.5rem; }
 
   .welcome-state { flex:1; display:flex; flex-direction:column; align-items:center;
     justify-content:center; color:var(--text3); text-align:center; padding:2rem; min-height:0; }
@@ -281,7 +272,6 @@
   ::-webkit-scrollbar-track { background:transparent; }
   ::-webkit-scrollbar-thumb { background:var(--bg4); border-radius:2px; }
 
-  /* MOBILE */
   @media(max-width:768px) {
     .app-layout { grid-template-columns:1fr; }
     .sidebar { position:fixed; left:-100%; top:0; bottom:0; z-index:100; width:280px; transition:.3s; }
@@ -299,6 +289,7 @@
     .icon-btn.info-btn { width:38px; height:38px; font-size:1.2rem; }
     .auth-box { padding:1.5rem; }
     .modal { padding:1.5rem; }
+    .room-owner-badge { display:none; }
   }
   @media(max-width:380px) {
     .toolbar-btn span { display:none; }
@@ -441,6 +432,7 @@
   </div>
 </div>
 
+<!-- MODAL: Crear sala -->
 <div class="modal-overlay" id="createRoomModal">
   <div class="modal">
     <div class="modal-title"><span class="title-icon">✨</span><span data-i18n="createRoomTitle">Crear nueva sala</span>
@@ -458,6 +450,7 @@
   </div>
 </div>
 
+<!-- MODAL: Unirse a sala -->
 <div class="modal-overlay" id="joinRoomModal">
   <div class="modal">
     <div class="modal-title"><span class="title-icon">🔑</span><span data-i18n="joinRoomTitle">Unirse a sala</span>
@@ -471,6 +464,7 @@
   </div>
 </div>
 
+<!-- MODAL: Info de sala -->
 <div class="modal-overlay" id="roomInfoModal">
   <div class="modal">
     <div class="modal-title"><span class="title-icon">ℹ️</span><span id="roomInfoTitle">Info de sala</span>
@@ -489,8 +483,27 @@
     </div>
     <p class="copy-hint" data-i18n="shareHint">Comparte este código y PIN con tus amigos para invitarlos</p>
     <button class="modal-btn primary" onclick="copyRoomInfo()" data-i18n="copyInfo">📋 Copiar invitación</button>
-    <button class="modal-btn secondary" onclick="leaveRoom()" style="background:rgba(239,68,68,0.1);color:var(--red);border-color:rgba(239,68,68,0.3)" data-i18n="leaveRoom">Salir de la sala</button>
+
+    <!-- Solo visible si SOS el dueño -->
+    <div id="ownerActions" style="display:none">
+      <div class="modal-divider"></div>
+      <button class="modal-btn danger" onclick="confirmDeleteRoom()" data-i18n="deleteRoom">🗑️ Eliminar sala</button>
+    </div>
+
+    <button class="modal-btn secondary" onclick="leaveRoom()" style="background:rgba(239,68,68,0.08);color:var(--text2);border-color:var(--border)" data-i18n="leaveRoom">🚪 Salir de la sala</button>
     <button class="modal-btn secondary" onclick="closeModal('roomInfo')" data-i18n="close">Cerrar</button>
+  </div>
+</div>
+
+<!-- MODAL: Confirmar eliminación -->
+<div class="modal-overlay" id="confirmDeleteModal">
+  <div class="modal confirm-modal">
+    <div class="confirm-icon">🗑️</div>
+    <div class="modal-title" style="justify-content:center"><span data-i18n="deleteTitle">Eliminar sala</span></div>
+    <p class="confirm-text" id="confirmDeleteText">¿Estás seguro de que querés eliminar esta sala?</p>
+    <p class="confirm-warning" data-i18n="deleteWarning">Esta acción no se puede deshacer. Se borrarán todos los mensajes y se sacará a todos los miembros.</p>
+    <button class="modal-btn danger" onclick="deleteRoom()" data-i18n="deleteConfirm">Sí, eliminar definitivamente</button>
+    <button class="modal-btn secondary" onclick="closeModal('confirmDelete')" data-i18n="cancel">Cancelar</button>
   </div>
 </div>
 
@@ -501,9 +514,6 @@
 <div id="toast">✓ Copiado al portapapeles</div>
 
 <script>
-// ═══════════════════════════════════════════════════
-// FIREBASE
-// ═══════════════════════════════════════════════════
 const firebaseConfig = {
   apiKey: "AIzaSyCJ0H7yJtn1MbDttfw8wXzYwikoCIreb4Q",
   authDomain: "chat-zone-l.firebaseapp.com",
@@ -525,17 +535,16 @@ const i18n = {
     loginBtn:'Entrar →', registerBtn:'Crear cuenta →', chooseUsername:'Elige tu usuario',
     choosePassword:'Contraseña', chooseAvatar:'Elige tu avatar', myRooms:'MIS SALAS',
     newRoom:'Nueva sala', logout:'Salir', createRoom:'Crear sala', joinRoom:'Unirse con código',
-    attach:'Adjuntar', media:'Foto/Video',
     createRoomTitle:'Crear nueva sala', roomName:'Nombre de la sala',
     roomCode:'Código de sala', roomPin:'PIN secreto', roomIcon2:'Icono de sala',
     createBtn:'Crear sala →', cancel:'Cancelar', joinRoomTitle:'Unirse a sala',
     enterCode:'Código de sala', enterPin:'PIN', joinBtn:'Unirse →',
     roomCodeLabel:'CÓDIGO DE SALA', roomPinLabel:'PIN', membersLabel:'MIEMBROS',
     shareHint:'Comparte este código y PIN con tus amigos para invitarlos',
-    copyInfo:'📋 Copiar invitación', leaveRoom:'Salir de la sala', close:'Cerrar',
+    copyInfo:'📋 Copiar invitación', leaveRoom:'🚪 Salir de la sala', close:'Cerrar',
     welcomeTitle:'Bienvenido a ChatZone',
     welcomeDesc:'Únete a una sala o crea una nueva para empezar a chatear.',
-    onlineSub:'En línea', logoSub:'Tu espacio para conectar',
+    logoSub:'Tu espacio para conectar',
     membersOnline:'miembros', newMsgs:'Nuevos mensajes',
     joinedRoom:'entró a la sala', leftRoom:'salió de la sala',
     messagePlaceholder:'Escribe un mensaje...',
@@ -544,24 +553,28 @@ const i18n = {
     errorRoomExists:'Ese código de sala ya existe', errorRoomNotFound:'Sala no encontrada o PIN incorrecto',
     copiedInvite:'¡Invitación copiada!', connOnline:'En línea', connOffline:'Desconectado',
     errorFirebase:'Error de conexión. Intenta de nuevo.', errorFileBig:'Archivo muy grande (máx. 2 MB)',
-    ownerTag:'creador', onlineTag:'en línea'
+    ownerTag:'creador',
+    deleteRoom:'🗑️ Eliminar sala',
+    deleteTitle:'Eliminar sala',
+    deleteWarning:'Esta acción no se puede deshacer. Se borrarán todos los mensajes y se sacará a todos los miembros.',
+    deleteConfirm:'Sí, eliminar definitivamente',
+    roomDeleted:'Sala eliminada correctamente'
   },
   en: {
     login:'Sign in', register:'Sign up', username:'Username', password:'Password',
     loginBtn:'Enter →', registerBtn:'Create account →', chooseUsername:'Choose username',
     choosePassword:'Password', chooseAvatar:'Choose your avatar', myRooms:'MY ROOMS',
     newRoom:'New room', logout:'Log out', createRoom:'Create room', joinRoom:'Join with code',
-    attach:'Attach', media:'Photo/Video',
     createRoomTitle:'Create new room', roomName:'Room name',
     roomCode:'Room code', roomPin:'Secret PIN', roomIcon2:'Room icon',
     createBtn:'Create room →', cancel:'Cancel', joinRoomTitle:'Join a room',
     enterCode:'Room code', enterPin:'PIN', joinBtn:'Join →',
     roomCodeLabel:'ROOM CODE', roomPinLabel:'PIN', membersLabel:'MEMBERS',
     shareHint:'Share this code and PIN with your friends to invite them',
-    copyInfo:'📋 Copy invite', leaveRoom:'Leave room', close:'Close',
+    copyInfo:'📋 Copy invite', leaveRoom:'🚪 Leave room', close:'Close',
     welcomeTitle:'Welcome to ChatZone',
     welcomeDesc:'Join a room or create a new one to start chatting with friends.',
-    onlineSub:'Online', logoSub:'Your space to connect',
+    logoSub:'Your space to connect',
     membersOnline:'members', newMsgs:'New messages',
     joinedRoom:'joined the room', leftRoom:'left the room',
     messagePlaceholder:'Type a message...',
@@ -570,7 +583,12 @@ const i18n = {
     errorRoomExists:'That room code already exists', errorRoomNotFound:'Room not found or wrong PIN',
     copiedInvite:'Invite copied!', connOnline:'Online', connOffline:'Offline',
     errorFirebase:'Connection error. Try again.', errorFileBig:'File too large (max 2 MB)',
-    ownerTag:'owner', onlineTag:'online'
+    ownerTag:'owner',
+    deleteRoom:'🗑️ Delete room',
+    deleteTitle:'Delete room',
+    deleteWarning:'This action cannot be undone. All messages will be deleted and all members will be removed.',
+    deleteConfirm:'Yes, delete permanently',
+    roomDeleted:'Room deleted successfully'
   }
 };
 let lang = 'es';
@@ -636,11 +654,10 @@ function initEmojis() {
 function toggleEmoji() {
   const bar = document.getElementById('emojiBar');
   bar.classList.toggle('open');
-  // Cerrar emoji si se toca afuera
   if(bar.classList.contains('open')) {
     setTimeout(()=>{
       const close = (ev) => {
-        if(!bar.contains(ev.target) && ev.target.textContent !== '😀') {
+        if(!bar.contains(ev.target)){
           bar.classList.remove('open');
           document.removeEventListener('touchstart', close);
           document.removeEventListener('mousedown', close);
@@ -679,7 +696,6 @@ function handleKey(e) { if (e.key==='Enter' && !e.shiftKey) { e.preventDefault()
 function autoResize(el) {
   el.style.height='auto';
   el.style.height=Math.min(el.scrollHeight, 80)+'px';
-  // Scroll al bottom si el usuario está escribiendo (solo si ya estaba abajo)
   if(isNearBottom()) scrollToBottom();
 }
 function showError(msg) { const e=document.getElementById('authError'); e.textContent=msg; e.style.display='block'; }
@@ -714,7 +730,6 @@ function switchTab(tab) {
   document.getElementById('tabRegister').classList.toggle('active',tab==='register');
   hideError();
 }
-
 async function doLogin() {
   hideError();
   const u=document.getElementById('loginUser').value.trim();
@@ -732,7 +747,6 @@ async function doLogin() {
   } catch(e){ showError(i18n[lang].errorFirebase); }
   setLoading('loginBtn',false);
 }
-
 async function doRegister() {
   hideError();
   const u=document.getElementById('regUser').value.trim();
@@ -756,7 +770,6 @@ async function doRegister() {
   } catch(e){ showError(i18n[lang].errorFirebase); }
   setLoading('regBtn',false);
 }
-
 function doLogout() {
   if(currentUser){
     db.ref('users/'+currentUser+'/online').set(false);
@@ -770,7 +783,6 @@ function doLogout() {
   document.getElementById('authScreen').style.display='flex';
   document.getElementById('langToggle').style.display='flex';
 }
-
 async function enterApp() {
   document.getElementById('authScreen').style.display='none';
   document.getElementById('langToggle').style.display='none';
@@ -838,10 +850,11 @@ function renderRooms() {
     const last=roomLastMessages[code];
     let lastText='';
     if(last) lastText=last.sender?last.sender+': '+(last.text||''):(last.text||'');
+    const isOwner=room.owner===currentUser;
     return `<div class="room-item${currentRoom===code?' active':''}" onclick="openRoom('${code}')">
       <div class="room-icon">${room.icon||'💬'}</div>
       <div class="room-info">
-        <div class="room-name">${escapeHtml(room.name)}</div>
+        <div class="room-name" style="display:flex;align-items:center">${escapeHtml(room.name)}${isOwner?'<span class="room-owner-badge">'+i18n[lang].ownerTag+'</span>':''}</div>
         <div class="room-last">${escapeHtml(lastText).substring(0,40)}</div>
       </div>
     </div>`;
@@ -861,7 +874,7 @@ async function fetchLastMessage(code) {
 function filterRooms(){ renderRooms(); }
 
 // ═══════════════════════════════════════════════════
-// CREAR / UNIRSE / SALIR
+// CREAR / UNIRSE / SALIR / ELIMINAR
 // ═══════════════════════════════════════════════════
 async function createRoom() {
   const name=document.getElementById('newRoomName').value.trim();
@@ -889,7 +902,6 @@ async function createRoom() {
   } catch(e){ alert(i18n[lang].errorFirebase); }
   setLoading('createRoomBtn',false);
 }
-
 async function joinRoom() {
   const code=document.getElementById('joinCode').value.trim();
   const pin=document.getElementById('joinPin').value.trim();
@@ -910,7 +922,6 @@ async function joinRoom() {
   } catch(e){ alert(i18n[lang].errorFirebase); }
   setLoading('joinRoomBtn',false);
 }
-
 async function leaveRoom() {
   const code=currentRoom; if(!code) return;
   try {
@@ -928,6 +939,38 @@ async function leaveRoom() {
   currentRoom=null; detachMessagesListener(); closeModal('roomInfo'); showWelcome();
 }
 
+// ── ELIMINAR SALA (solo owner) ──
+function confirmDeleteRoom() {
+  const room = cachedRooms[currentRoom];
+  if (!room || room.owner !== currentUser) return;
+  const roomName = room.name;
+  document.getElementById('confirmDeleteText').textContent =
+    (lang==='es' ? '¿Estás seguro de que querés eliminar "' : 'Are you sure you want to delete "') +
+    roomName + (lang==='es' ? '"?' : '"?');
+  closeModal('roomInfo');
+  openModal('confirmDelete');
+}
+
+async function deleteRoom() {
+  const code = currentRoom;
+  if (!code) return;
+  const room = cachedRooms[code];
+  if (!room || room.owner !== currentUser) return;
+
+  closeModal('confirmDelete');
+  currentRoom = null;
+  detachMessagesListener();
+
+  try {
+    await db.ref('rooms/' + code).remove();
+    delete roomLastMessages[code];
+    showToast(i18n[lang].roomDeleted);
+  } catch(e) {
+    showToast(i18n[lang].errorFirebase);
+  }
+  showWelcome();
+}
+
 // ═══════════════════════════════════════════════════
 // ABRIR SALA / MENSAJES
 // ═══════════════════════════════════════════════════
@@ -940,7 +983,6 @@ async function openRoom(code) {
   document.getElementById('chatRoomName').textContent=room.name;
   updateChatHeader();
   renderRooms();
-  // Cerrar emoji bar al cambiar de sala
   document.getElementById('emojiBar').classList.remove('open');
   await loadInitialMessages(code);
   listenNewMessages(code);
@@ -1105,6 +1147,9 @@ async function openModal(name) {
     document.getElementById('roomInfoTitle').textContent=room.name;
     document.getElementById('roomInfoCode').textContent=room.code;
     document.getElementById('roomInfoPin').textContent=room.pin;
+    // Mostrar/ocultar botón de eliminar según si es owner
+    document.getElementById('ownerActions').style.display = room.owner===currentUser ? '' : 'none';
+    // Lista de miembros
     const members=room.members?Object.keys(room.members):[];
     if(members.length){
       let html='<div style="display:flex;flex-direction:column;gap:6px;margin-top:6px">';
@@ -1114,8 +1159,7 @@ async function openModal(name) {
         const isOn=onlineUsers.has(m);
         html+=`<div style="display:flex;align-items:center;gap:8px;padding:4px 0">
           <span style="font-size:1.2rem">${av}</span>
-          <span style="flex:1;font-size:.9rem">${escapeHtml(m)}</span>
-          ${isOwner?`<span style="font-size:.7rem;color:var(--accent2);background:rgba(108,99,255,0.15);padding:2px 8px;border-radius:10px">${i18n[lang].ownerTag}</span>`:''}
+          <span style="flex:1;font-size:.9rem">${escapeHtml(m)}${isOwner?' <span style="font-size:.7rem;color:var(--accent2);background:rgba(108,99,255,0.15);padding:1px 6px;border-radius:8px">'+i18n[lang].ownerTag+'</span>':''}</span>
           <span style="width:7px;height:7px;border-radius:50%;background:${isOn?'var(--green)':'var(--text3)'}"></span>
         </div>`;
       }
@@ -1127,22 +1171,20 @@ async function openModal(name) {
           if(snap.val()) userAvatarCache[m]=snap.val();
         }
       }
-      if(members.some(m=>userAvatarCache[m])){
-        let html2='<div style="display:flex;flex-direction:column;gap:6px;margin-top:6px">';
-        for(const m of members){
-          const av=userAvatarCache[m]||'😊';
-          const isOwner=m===room.owner;
-          const isOn=onlineUsers.has(m);
-          html2+=`<div style="display:flex;align-items:center;gap:8px;padding:4px 0">
-            <span style="font-size:1.2rem">${av}</span>
-            <span style="flex:1;font-size:.9rem">${escapeHtml(m)}</span>
-            ${isOwner?`<span style="font-size:.7rem;color:var(--accent2);background:rgba(108,99,255,0.15);padding:2px 8px;border-radius:10px">${i18n[lang].ownerTag}</span>`:''}
-            <span style="width:7px;height:7px;border-radius:50%;background:${isOn?'var(--green)':'var(--text3)'}"></span>
-          </div>`;
-        }
-        html2+='</div>';
-        document.getElementById('roomMembersList').innerHTML=html2;
+      // Re-renderizar con avatares cargados
+      let html2='<div style="display:flex;flex-direction:column;gap:6px;margin-top:6px">';
+      for(const m of members){
+        const av=userAvatarCache[m]||'😊';
+        const isOwner=m===room.owner;
+        const isOn=onlineUsers.has(m);
+        html2+=`<div style="display:flex;align-items:center;gap:8px;padding:4px 0">
+          <span style="font-size:1.2rem">${av}</span>
+          <span style="flex:1;font-size:.9rem">${escapeHtml(m)}${isOwner?' <span style="font-size:.7rem;color:var(--accent2);background:rgba(108,99,255,0.15);padding:1px 6px;border-radius:8px">'+i18n[lang].ownerTag+'</span>':''}</span>
+          <span style="width:7px;height:7px;border-radius:50%;background:${isOn?'var(--green)':'var(--text3)'}"></span>
+        </div>`;
       }
+      html2+='</div>';
+      document.getElementById('roomMembersList').innerHTML=html2;
     } else {
       document.getElementById('roomMembersList').textContent='—';
     }
@@ -1160,10 +1202,6 @@ function copyRoomInfo() {
 document.querySelectorAll('.modal-overlay').forEach(el=>{
   el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open');});
 });
-
-// ═══════════════════════════════════════════════════
-// MOBILE: cerrar emoji al tocar mensajes
-// ═══════════════════════════════════════════════════
 document.getElementById('messages').addEventListener('click', ()=>{
   document.getElementById('emojiBar').classList.remove('open');
 });
@@ -1179,7 +1217,6 @@ initEmojis();
 ['regUser','regPass'].forEach(id=>{
   document.getElementById(id).addEventListener('keydown',e=>{if(e.key==='Enter')doRegister();});
 });
-
 (async function init(){
   const saved=localStorage.getItem('chatzone_session');
   if(saved){
@@ -1191,7 +1228,6 @@ initEmojis();
     } catch(e){ localStorage.removeItem('chatzone_session'); }
   }
 })();
-
 window.addEventListener('beforeunload',()=>{
   if(currentUser){
     navigator.sendBeacon(
